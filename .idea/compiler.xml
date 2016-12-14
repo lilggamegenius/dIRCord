@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="Dick-Cord_main" target="1.8" />
+      <module name="Dick-Cord_test" target="1.8" />
+      <module name="dIRCord_main" target="1.8" />
+      <module name="dIRCord_test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
