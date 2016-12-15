@@ -1,6 +1,8 @@
 package com.LilG;
 
 import com.LilG.utils.LilGUtil;
+import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
 
@@ -50,6 +52,82 @@ public class DiscordListener extends ListenerAdapter {
             }
         }
     }
+
+    public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
+        if (event.getMember().equals(event.getGuild().getSelfMember())) {
+            return;
+        }
+        for (String discordChannels : Main.config[configID].channelMapping.keySet()) {
+            for (TextChannel textChannel : event.getGuild().getTextChannels()) {
+                if (discordChannels.substring(1, discordChannels.length()).equals(textChannel.getName())) {
+                    String color = "";
+                    if (Main.config[configID].ircNickColor) {
+                        int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+                        if (ircColorCode < 0) {
+                            ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
+                        }
+                        color = colorCode + String.format("%02d", ircColorCode);
+                    }
+
+                    String prevNick = event.getPrevNick();
+                    String newNick = event.getNewNick();
+                    String username = event.getMember().getUser().getName();
+                    if (prevNick == null) {
+                        prevNick = username;
+                    } else if (newNick == null) {
+                        newNick = username;
+                    }
+
+                    Main.pircBotX.send()
+                            .message(Main.config[configID]
+                                            .channelMapping
+                                            .get(discordChannels),
+                                    String.format("\\*%s%s%c\\* %s",
+                                            color,
+                                            prevNick,
+                                            colorCode,
+                                            "Has changed nick to " + newNick
+                                    )
+                            )
+                    ;
+                }
+            }
+        }
+    }
+
+    /*public void onUserOnlineStatusUpdate(UserOnlineStatusUpdateEvent event) {
+        if (event.getUser().equals(jda.getSelfUser())) {
+            return;
+        }
+        Member member = event.getGuild().getMember(event.getUser());
+        for (String discordChannels : Main.config[configID].channelMapping.keySet()) {
+            for(TextChannel textChannel : event.getGuild().getTextChannels()) {
+                if (discordChannels.substring(1, discordChannels.length()).equals(textChannel.getName())) {
+                    String color = "";
+                    if (Main.config[configID].ircNickColor) {
+                        int ircColorCode = ColorMap.valueOf(member.getColor());
+                        if (ircColorCode < 0) {
+                            ircColorCode = LilGUtil.hash(member.getEffectiveName(), 12) + 2;
+                        }
+                        color = colorCode + String.format("%02d", ircColorCode);
+                    }
+
+                    Main.pircBotX.send()
+                            .message(Main.config[configID]
+                                            .channelMapping
+                                            .get(discordChannels),
+                                    String.format("\\*%s%s%c\\* %s",
+                                            color,
+                                            prevNick,
+                                            colorCode,
+                                            "Has changed nick to " + newNick
+                                    )
+                            )
+                    ;
+                }
+            }
+        }
+    }*/
 
     enum ColorMap {
         turqoise(10, new Color(26, 188, 156)),
