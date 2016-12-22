@@ -10,7 +10,6 @@ import java.util.Map;
  */
 
 public class Configuration {
-
     public String nickname = "dIRCord<Missing nick in config>";
     public String userName = "dIRCord<Missing username in config>";
     public String realName = "dIRCord - Discord IRC Bridge";

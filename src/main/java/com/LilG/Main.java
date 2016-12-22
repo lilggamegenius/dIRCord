@@ -55,6 +55,7 @@ public class Main {
                     .setNickservPassword(config.nickservPassword)
                     .setName(config.nickname) //Set the nick of the bot.
                     .setLogin(config.userName)
+                    .setAutoSplitMessage(false)
                     .setRealName(kvircFlags + config.realName);
             for (String channel : config.channelMapping.values()) {
                 String[] channelValues = channel.split(" ", 1);

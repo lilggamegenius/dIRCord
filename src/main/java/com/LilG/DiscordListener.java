@@ -5,8 +5,11 @@ import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
+import org.apache.commons.lang3.StringUtils;
 
 import java.awt.*;
+
+import static com.LilG.utils.LilGUtil.startsWithAny;
 
 /**
  * Created by lil-g on 12/12/16.
@@ -33,22 +36,40 @@ public class DiscordListener extends ListenerAdapter {
                     }
                     color = colorCode + String.format("%02d", ircColorCode);
                 }
-
-                Main.pircBotX.send()
-                        .message(Main.config[configID]
-                                        .channelMapping
-                                        .get(discordChannels),
-                                String.format("<%s%s%c> %s",
-                                        color,
-                                        event.getMember().getEffectiveName(),
-                                        colorCode,
-                                        event.getMessage().getContent()
-                                                .replace('\u0007', '␇')
-                                                .replace('\n', '␤')
-                                                .replace('\r', '␍')
-                                )
-                        )
-                ;
+                String message = event.getMessage().getContent();
+                if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+                    Main.pircBotX.send()
+                            .message(Main.config[configID]
+                                            .channelMapping
+                                            .get(discordChannels),
+                                    String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
+                                            color,
+                                            event.getMember().getEffectiveName(),
+                                            colorCode
+                                    )
+                            )
+                    ;
+                    Main.pircBotX.send()
+                            .message(Main.config[configID]
+                                            .channelMapping
+                                            .get(discordChannels),
+                                    formatString(event.getMessage().getContent())
+                            )
+                    ;
+                } else {
+                    Main.pircBotX.send()
+                            .message(Main.config[configID]
+                                            .channelMapping
+                                            .get(discordChannels),
+                                    String.format("<%s%s%c> %s",
+                                            color,
+                                            event.getMember().getEffectiveName(),
+                                            colorCode,
+                                            formatString(event.getMessage().getContent())
+                                    )
+                            )
+                    ;
+                }
             }
         }
     }
@@ -61,13 +82,7 @@ public class DiscordListener extends ListenerAdapter {
             for (TextChannel textChannel : event.getGuild().getTextChannels()) {
                 if (discordChannels.substring(1, discordChannels.length()).equals(textChannel.getName())) {
                     String color = "";
-                    if (Main.config[configID].ircNickColor) {
-                        int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-                        if (ircColorCode < 0) {
-                            ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
-                        }
-                        color = colorCode + String.format("%02d", ircColorCode);
-                    }
+                    String secondColor = "";
 
                     String prevNick = event.getPrevNick();
                     String newNick = event.getNewNick();
@@ -77,16 +92,31 @@ public class DiscordListener extends ListenerAdapter {
                     } else if (newNick == null) {
                         newNick = username;
                     }
+                    if (Main.config[configID].ircNickColor) {
+                        boolean usingDiscordColor = true;
+                        int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+                        if (ircColorCode < 0) {
+                            ircColorCode = LilGUtil.hash(prevNick, 12) + 2;
+                            usingDiscordColor = false;
+                        }
+                        color = colorCode + String.format("%02d", ircColorCode);
+                        if (!usingDiscordColor) {
+                            secondColor = colorCode + String.format("%02d", LilGUtil.hash(newNick, 12) + 2);
+                        }
+                    }
 
                     Main.pircBotX.send()
                             .message(Main.config[configID]
                                             .channelMapping
                                             .get(discordChannels),
-                                    String.format("\\*%s%s%c\\* %s",
+                                    String.format("\u001D*%s%s%c\u001D* %s%s%s%c",
                                             color,
                                             prevNick,
                                             colorCode,
-                                            "Has changed nick to " + newNick
+                                            "Has changed nick to ",
+                                            secondColor,
+                                            newNick,
+                                            colorCode
                                     )
                             )
                     ;
@@ -128,6 +158,57 @@ public class DiscordListener extends ListenerAdapter {
             }
         }
     }*/
+
+    private String formatString(String message) {
+        final char underline = '\u001F';
+        final char italics = '\u001D';
+        final char bold = '\u0002';
+        int underlineCount = StringUtils.countMatches(message, "__");
+        if (underlineCount > 1) {
+            if (underlineCount % 2 != 0) {
+                for (int count = 0; count < underlineCount; count++) {
+                    message = message.replace("__", underline + "");
+                }
+            } else {
+                message = message.replace("__", underline + "");
+            }
+        }
+        int boldCount = StringUtils.countMatches(message, "**");
+        if (boldCount > 1) {
+            if (boldCount % 2 != 0) {
+                for (int count = 0; count < boldCount; count++) {
+                    message = message.replace("**", bold + "");
+                }
+            } else {
+                message = message.replace("**", bold + "");
+            }
+        }
+        int italicsCount = StringUtils.countMatches(message, "_");
+        if (italicsCount > 1) {
+            if (italicsCount % 2 != 0) {
+                for (int count = 0; count < italicsCount; count++) {
+                    message = message.replace("_", italics + "");
+                }
+            } else {
+                message = message.replace("_", italics + "");
+            }
+        }
+        italicsCount = StringUtils.countMatches(message, "*");
+        if (italicsCount > 1) {
+            if (italicsCount % 2 != 0) {
+                for (int count = 0; count < italicsCount; count++) {
+                    message = message.replace("*", italics + "");
+                }
+            } else {
+                message = message.replace("*", italics + "");
+            }
+        }
+        message = message
+                .replace('\u0007', '␇')
+                .replace('\n', '␤')
+                .replace('\r', '␍');
+        return message;
+    }
 
     enum ColorMap {
         turqoise(10, new Color(26, 188, 156)),
