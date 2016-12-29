@@ -1,7 +1,12 @@
 package com.LilG;
 
+import com.google.common.collect.HashBiMap;
+import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.entities.TextChannel;
+import org.pircbotx.Channel;
+import org.pircbotx.PircBotX;
+
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,13 +22,20 @@ public class Configuration {
     public int port = 6667;
     public boolean SSL = false;
     public String nickservPassword = "<Missing nickserv password in config>";
-    public List<List<String>> autoSendCommands = new ArrayList<>();
+    public boolean autoSplitMessage = false;
+    public List<String> autoSendCommands = new ArrayList<>();
     public boolean floodProtection = true;
     public int floodProtectionDelay = 1000;
     public boolean ircNickColor = false;
-
     public String discordToken = "<Missing discord token in config>";
 
-    public Map<String, String> channelMapping = new HashMap<>();
+    public Map<String, String> channelMapping = HashBiMap.create();
+
     public List<String> commandCharacters = new ArrayList<>();
+
+    public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
+    public transient IrcListener ircListener;
+    public transient DiscordListener discordListener;
+    public transient PircBotX pircBotX;
+    public transient JDA jda;
 }

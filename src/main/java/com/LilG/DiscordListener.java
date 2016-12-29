@@ -1,11 +1,15 @@
 package com.LilG;
 
+import ch.qos.logback.classic.Logger;
 import com.LilG.utils.LilGUtil;
 import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
 import org.apache.commons.lang3.StringUtils;
+import org.pircbotx.Channel;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 
@@ -16,61 +20,58 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
  */
 public class DiscordListener extends ListenerAdapter {
     private final static char colorCode = '\u0003';
+    private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
     private final byte configID;
+
+    public volatile boolean ready;
 
     DiscordListener(byte configID) {
         this.configID = configID;
+    }
+
+    @Override
+    public void onReady(ReadyEvent event) {
+        ready = true;
+        Main.config[configID].ircListener.fillChannelMap();
     }
 
     public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
         if (event.getMember().equals(event.getGuild().getSelfMember())) {
             return;
         }
-        for (String discordChannels : Main.config[configID].channelMapping.keySet()) {
-            if (discordChannels.substring(1, discordChannels.length()).equals(event.getChannel().getName())) {
-                String color = "";
-                if (Main.config[configID].ircNickColor) {
-                    int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-                    if (ircColorCode < 0) {
-                        ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
-                    }
-                    color = colorCode + String.format("%02d", ircColorCode);
-                }
-                String message = event.getMessage().getContent();
-                if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
-                    Main.pircBotX.send()
-                            .message(Main.config[configID]
-                                            .channelMapping
-                                            .get(discordChannels),
-                                    String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
-                                            color,
-                                            event.getMember().getEffectiveName(),
-                                            colorCode
-                                    )
-                            )
-                    ;
-                    Main.pircBotX.send()
-                            .message(Main.config[configID]
-                                            .channelMapping
-                                            .get(discordChannels),
-                                    formatString(event.getMessage().getContent())
-                            )
-                    ;
-                } else {
-                    Main.pircBotX.send()
-                            .message(Main.config[configID]
-                                            .channelMapping
-                                            .get(discordChannels),
-                                    String.format("<%s%s%c> %s",
-                                            color,
-                                            event.getMember().getEffectiveName(),
-                                            colorCode,
-                                            formatString(event.getMessage().getContent())
-                                    )
-                            )
-                    ;
-                }
+        String color = "";
+        if (Main.config[configID].ircNickColor) {
+            int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+            if (ircColorCode < 0) {
+                ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
             }
+            color = colorCode + String.format("%02d", ircColorCode);
+        }
+        String message = event.getMessage().getContent();
+        Channel channel = Main.config[configID].channelMapObj.get(event.getChannel());
+        if (channel == null) {
+            return;
+        }
+        if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+            channel.send().message(
+                    String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
+                            color,
+                            event.getMember().getEffectiveName(),
+                            colorCode
+                    )
+            );
+            channel.send().message(
+                    formatString(event.getMessage().getContent())
+            );
+        } else {
+            channel.send().message(
+                    String.format("<%s%s%c> %s",
+                            color,
+                            event.getMember().getEffectiveName(),
+                            colorCode,
+                            formatString(event.getMessage().getContent())
+                    )
+            );
         }
     }
 
@@ -78,50 +79,46 @@ public class DiscordListener extends ListenerAdapter {
         if (event.getMember().equals(event.getGuild().getSelfMember())) {
             return;
         }
-        for (String discordChannels : Main.config[configID].channelMapping.keySet()) {
-            for (TextChannel textChannel : event.getGuild().getTextChannels()) {
-                if (discordChannels.substring(1, discordChannels.length()).equals(textChannel.getName())) {
-                    String color = "";
-                    String secondColor = "";
+        for (TextChannel textChannel : event.getGuild().getTextChannels()) {
+            Channel channel = Main.config[configID].channelMapObj.get(textChannel);
+            if (channel == null) {
+                continue;
+            }
+            String color = "";
+            String secondColor = "";
 
-                    String prevNick = event.getPrevNick();
-                    String newNick = event.getNewNick();
-                    String username = event.getMember().getUser().getName();
-                    if (prevNick == null) {
-                        prevNick = username;
-                    } else if (newNick == null) {
-                        newNick = username;
-                    }
-                    if (Main.config[configID].ircNickColor) {
-                        boolean usingDiscordColor = true;
-                        int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-                        if (ircColorCode < 0) {
-                            ircColorCode = LilGUtil.hash(prevNick, 12) + 2;
-                            usingDiscordColor = false;
-                        }
-                        color = colorCode + String.format("%02d", ircColorCode);
-                        if (!usingDiscordColor) {
-                            secondColor = colorCode + String.format("%02d", LilGUtil.hash(newNick, 12) + 2);
-                        }
-                    }
-
-                    Main.pircBotX.send()
-                            .message(Main.config[configID]
-                                            .channelMapping
-                                            .get(discordChannels),
-                                    String.format("\u001D*%s%s%c\u001D* %s%s%s%c",
-                                            color,
-                                            prevNick,
-                                            colorCode,
-                                            "Has changed nick to ",
-                                            secondColor,
-                                            newNick,
-                                            colorCode
-                                    )
-                            )
-                    ;
+            String prevNick = event.getPrevNick();
+            String newNick = event.getNewNick();
+            String username = event.getMember().getUser().getName();
+            if (prevNick == null) {
+                prevNick = username;
+            } else if (newNick == null) {
+                newNick = username;
+            }
+            if (Main.config[configID].ircNickColor) {
+                boolean usingDiscordColor = true;
+                int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+                if (ircColorCode < 0) {
+                    ircColorCode = LilGUtil.hash(prevNick, 12) + 2;
+                    usingDiscordColor = false;
+                }
+                color = colorCode + String.format("%02d", ircColorCode);
+                if (!usingDiscordColor) {
+                    secondColor = colorCode + String.format("%02d", LilGUtil.hash(newNick, 12) + 2);
                 }
             }
+
+            channel.send().message(String.format("\u001D*%s%s%c\u001D* %s%s%s%c",
+                    color,
+                    prevNick,
+                    colorCode,
+                    "Has changed nick to ",
+                    secondColor,
+                    newNick,
+                    colorCode
+                    )
+            )
+            ;
         }
     }
 

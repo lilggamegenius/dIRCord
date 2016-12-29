@@ -1,5 +1,8 @@
 package com.LilG;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableSortedSet;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.Member;
@@ -8,11 +11,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.Channel;
 import org.pircbotx.User;
 import org.pircbotx.UserLevel;
+import org.pircbotx.hooks.Event;
 import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.events.*;
 import org.pircbotx.hooks.types.GenericChannelEvent;
-
-import java.util.List;
+import org.slf4j.LoggerFactory;
 
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
@@ -20,19 +23,32 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
  * Created by lil-g on 12/12/16.
  */
 public class IrcListener extends ListenerAdapter {
+    private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(IrcListener.class);
     private final byte configID;
+    public volatile boolean ready;
 
     IrcListener(byte configID) {
         this.configID = configID;
     }
 
+    public static void handleCommand(MessageEvent event) {
+
+    }
+
+    @Override
+    public void onEvent(Event event) throws Exception {
+        super.onEvent(event);
+        fillChannelMap();
+    }
+
     public void onConnect(ConnectEvent event) {
-        Main.pircBotX = event.getBot();
+        Main.config[configID].pircBotX = event.getBot();
+        ready = true;
     }
 
     @Override
     public void onMessage(MessageEvent event) {
-        Main.pircBotX = event.getBot();
+        Main.config[configID].pircBotX = event.getBot();
         String message = event.getMessage();
         TextChannel channel = getDiscordChannel(event);
 
@@ -63,7 +79,7 @@ public class IrcListener extends ListenerAdapter {
             return;
         }
         if (message.contains("\u0001AVATAR")) {
-            event.getUser().send().notice("\u0001AVATAR " + Main.jda.getSelfUser().getAvatarUrl() + "\u0001");
+            event.getUser().send().notice("\u0001AVATAR " + Main.config[configID].jda.getSelfUser().getAvatarUrl() + "\u0001");
         }
     }
 
@@ -90,9 +106,10 @@ public class IrcListener extends ListenerAdapter {
     @Override
     public void onKick(KickEvent event) {
         getDiscordChannel(event).sendMessage(
-                String.format("**\\*%s\\*** _%s_",
+                String.format("**\\*%s\\*** Kicked _%s_: %s",
                         event.getUser().getNick(),
-                        "Kicked"
+                        event.getRecipient().getNick(),
+                        event.getReason()
                 )
         ).queue();
     }
@@ -119,20 +136,15 @@ public class IrcListener extends ListenerAdapter {
 
     @Override
     public void onQuit(QuitEvent event) {
-        for (String DiscordChannels : Main.config[configID].channelMapping.keySet()) {
-            for (Guild guild : Main.jda.getGuilds()) {
-                List<TextChannel> channelList = guild.getTextChannelsByName(DiscordChannels.replace("#", ""), true);
-                if (!channelList.isEmpty()) {
-                    for (TextChannel channel : channelList) {
-                        channel.sendMessage(
-                                String.format("**\\*%s\\*** _%s_",
-                                        event.getUser().getNick(),
-                                        "has quit: " + event.getReason()
-                                )
-                        ).queue();
-                    }
-                }
-            }
+        LOGGER.setLevel(Level.ALL);
+        for (Channel channel : event.getUser().getChannels()) {
+            TextChannel textChannel = Main.config[configID].channelMapObj.inverse().get(channel);
+            textChannel.sendMessage(
+                    String.format("**\\*%s\\*** _%s_",
+                            event.getUser().getNick(),
+                            "has quit: " + event.getReason().replace("http://www.mibbit.com", "<http://www.mibbit.com>")
+                    )
+            ).queue();
         }
     }
 
@@ -141,18 +153,24 @@ public class IrcListener extends ListenerAdapter {
 
     }
 
-    public TextChannel getDiscordChannel(GenericChannelEvent event) {
-        for (String DiscordChannels : Main.config[configID].channelMapping.keySet()) {
-            if (Main.config[configID].channelMapping.get(DiscordChannels).equalsIgnoreCase(event.getChannel().getName())) {
-                for (Guild guild : Main.jda.getGuilds()) {
-                    List<TextChannel> channelList = guild.getTextChannelsByName(DiscordChannels.replace("#", ""), true);
-                    if (!channelList.isEmpty()) {
-                        return channelList.get(0);
-                    }
-                }
+    @Override
+    public void onNickChange(NickChangeEvent event) throws Exception {
+        for (Channel channel : event.getUser().getChannels()) {
+            TextChannel textChannel = Main.config[configID].channelMapObj.inverse().get(channel);
+            if (textChannel == null) {
+                continue;
             }
+            textChannel.sendMessage(
+                    String.format("**\\*%s\\*** is now known as _%s_",
+                            event.getOldNick(),
+                            event.getNewNick()
+                    )
+            ).queue();
         }
-        return null;
+    }
+
+    public TextChannel getDiscordChannel(GenericChannelEvent event) {
+        return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
     }
 
     public String getUserSymbol(MessageEvent event) {
@@ -224,5 +242,21 @@ public class IrcListener extends ListenerAdapter {
             }
         }
         return strToFormat;
+    }
+
+    public void fillChannelMap() {
+        if (Main.config[configID].pircBotX == null || Main.config[configID].pircBotX.getUserBot().getChannels().size() == 0 || !ready) {
+            return;
+        }
+        BiMap<String, String> ircDiscordChanMap = ((BiMap<String, String>) Main.config[configID].channelMapping).inverse();
+        for (Channel channel : Main.config[configID].pircBotX.getUserBot().getChannels()) {
+            for (Guild guild : Main.config[configID].jda.getGuilds()) {
+                for (TextChannel textChannel : guild.getTextChannels()) {
+                    if (ircDiscordChanMap.get(channel.getName()).equals("#" + textChannel.getName())) {
+                        Main.config[configID].channelMapObj.put(textChannel, channel);
+                    }
+                }
+            }
+        }
     }
 }
