@@ -232,7 +232,7 @@ public class IrcListener extends ListenerAdapter {
             String strLower = strToFormat.toLowerCase();
             for (Member member : channel.getMembers()) {
                 String memberName = member.getEffectiveName().toLowerCase();
-                while (strLower.contains(memberName)) {
+                while (strLower.contains("@" + memberName)) {
                     int index = strLower.indexOf(memberName);
                     strToFormat = strToFormat.substring(0, index - 1) +
                             member.getAsMention() +

@@ -2,6 +2,7 @@ package com.LilG;
 
 import ch.qos.logback.classic.Logger;
 import com.LilG.utils.LilGUtil;
+import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
@@ -12,6 +13,7 @@ import org.pircbotx.Channel;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.util.List;
 
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
@@ -52,26 +54,40 @@ public class DiscordListener extends ListenerAdapter {
         if (channel == null) {
             return;
         }
-        if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
-            channel.send().message(
-                    String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
-                            color,
-                            event.getMember().getEffectiveName(),
-                            colorCode
-                    )
+        if (message.length() != 0) {
+            if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+                channel.send().message(
+                        String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
+                                color,
+                                event.getMember().getEffectiveName(),
+                                colorCode
+                        )
+                );
+                channel.send().message(
+                        formatString(event.getMessage().getContent())
+                );
+            } else {
+                channel.send().message(
+                        String.format("<%s%s%c> %s",
+                                color,
+                                event.getMember().getEffectiveName(),
+                                colorCode,
+                                formatString(event.getMessage().getContent())
+                        )
+                );
+            }
+        }
+        List<Message.Attachment> attachments;
+        if ((attachments = event.getMessage().getAttachments()).size() != 0) {
+            StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
+                    color,
+                    event.getMember().getEffectiveName(),
+                    colorCode)
             );
-            channel.send().message(
-                    formatString(event.getMessage().getContent())
-            );
-        } else {
-            channel.send().message(
-                    String.format("<%s%s%c> %s",
-                            color,
-                            event.getMember().getEffectiveName(),
-                            colorCode,
-                            formatString(event.getMessage().getContent())
-                    )
-            );
+            for (Message.Attachment attachment : attachments) {
+                embedMessage.append(" ").append(attachment.getUrl());
+            }
+            channel.send().message(embedMessage.toString());
         }
     }
 
