@@ -33,6 +33,8 @@ public class Configuration {
 
     public List<String> commandCharacters = new ArrayList<>();
 
+    public int minutesOfInactivityToUpdate = 10;
+
     public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
     public transient IrcListener ircListener;
     public transient DiscordListener discordListener;

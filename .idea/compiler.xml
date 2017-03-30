@@ -6,6 +6,8 @@
       <module name="Dick-Cord_test" target="1.8" />
       <module name="dIRCord_main" target="1.8" />
       <module name="dIRCord_test" target="1.8" />
+      <module name="dIRCord_wrapper_main" target="1.8" />
+      <module name="dIRCord_wrapper_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

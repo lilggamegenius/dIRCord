@@ -1,5 +1,6 @@
 package com.LilG;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.google.common.collect.HashBiMap;
 import com.google.gson.Gson;
@@ -13,10 +14,8 @@ import org.pircbotx.UtilSSLSocketFactory;
 import org.slf4j.LoggerFactory;
 
 import javax.security.auth.login.LoginException;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.Reader;
+import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 /**
@@ -28,9 +27,26 @@ public class Main {
     private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Main.class);
     private final static int attempts = 10;
     private final static int connectDelay = 15 * 1000;
+    public static long lastActivity = System.currentTimeMillis(); // activity as in people talking
     public static Configuration[] config;
 
     public static void main(String args[]) throws LoginException, InterruptedException, RateLimitedException {
+        LOGGER.setLevel(Level.ALL);
+        new Thread(() -> {
+            try {
+                LOGGER.trace("Starting thread");
+                while (!Thread.currentThread().isInterrupted()) {
+                    Thread.sleep(60 * 1000);
+                    if (Main.lastActivity + 1000 * 60 * 10 < System.currentTimeMillis()) {
+                        LOGGER.trace("Checking for new build");
+                        Main.checkForNewBuild();
+                    }
+                }
+            } catch (InterruptedException ignored) {
+            } catch (Exception e) {
+                LOGGER.error("Error in update thread", e);
+            }
+        }).start();
         String configFilePath;
         if (args.length == 0) {
             configFilePath = "config.json";
@@ -94,5 +110,24 @@ public class Main {
             LOGGER.error("Error", e);
         }
 
+    }
+
+    public static void checkForNewBuild() throws URISyntaxException, IOException {
+        if (Thread.holdsLock(kvircFlags)) return;
+        synchronized (kvircFlags) {
+            File thisJar = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            File newJar = new File(thisJar.getParent(), thisJar.getName() + ".new");
+            LOGGER.trace("This jar: " + thisJar.getName() + " New jar: " + newJar.getName());
+            if (!newJar.exists()) {
+                LOGGER.trace("no new build found");
+                return;
+            }
+            LOGGER.trace("Found build, exiting with code 1");
+            manager.stop("Updating bridge");
+            for (Configuration configuration : config) {
+                configuration.jda.shutdown();
+            }
+            System.exit(1); // tell wrapper that new jar was found
+        }
     }
 }

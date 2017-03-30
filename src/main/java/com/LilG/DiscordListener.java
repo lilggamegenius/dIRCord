@@ -89,9 +89,11 @@ public class DiscordListener extends ListenerAdapter {
             }
             channel.send().message(embedMessage.toString());
         }
+        Main.lastActivity = System.currentTimeMillis();
     }
 
     public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
+
         if (event.getMember().equals(event.getGuild().getSelfMember())) {
             return;
         }

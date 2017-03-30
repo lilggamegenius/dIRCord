@@ -5,6 +5,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord_main.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord_main.iml" group="dIRCord" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord_test.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord_test.iml" group="dIRCord" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord_wrapper.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord_wrapper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord_wrapper_main.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord_wrapper_main.iml" group="dIRCord_wrapper" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord_wrapper_test.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord_wrapper_test.iml" group="dIRCord_wrapper" />
     </modules>
   </component>
 </project>

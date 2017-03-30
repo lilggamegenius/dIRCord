@@ -56,7 +56,7 @@ public class IrcListener extends ListenerAdapter {
             channel.sendMessage(
                     String.format("_Command Sent by_ `%s%s`",
                             getUserSymbol(event),
-                            event.getUser().getHostmask()
+                            formatName(event.getUser(), true)
                     )
             ).queue(
                     message1 -> channel.sendMessage(formatString(channel, message)).queue()
@@ -65,11 +65,12 @@ public class IrcListener extends ListenerAdapter {
             channel.sendMessage(
                     String.format("**<%s%s>** %s",
                             getUserSymbol(event),
-                            event.getUser().getNick(),
+                            formatName(event.getUser()),
                             formatString(channel, message)
                     )
             ).queue();
         }
+        Main.lastActivity = System.currentTimeMillis();
     }
 
     public void onNotice(NoticeEvent event) {
@@ -87,7 +88,7 @@ public class IrcListener extends ListenerAdapter {
     public void onJoin(JoinEvent event) {
         getDiscordChannel(event).sendMessage(
                 String.format("**\\*%s\\*** _%s_",
-                        event.getUser().getNick(),
+                        formatName(event.getUser()),
                         "Joined"
                 )
         ).queue();
@@ -96,9 +97,9 @@ public class IrcListener extends ListenerAdapter {
     @Override
     public void onPart(PartEvent event) {
         getDiscordChannel(event).sendMessage(
-                String.format("**\\*%s\\*** _%s_",
-                        event.getUser().getNick(),
-                        "Left"
+                String.format("**\\*%s\\*** _Left_ Reason: %s",
+                        formatName(event.getUser()),
+                        event.getReason()
                 )
         ).queue();
     }
@@ -107,8 +108,8 @@ public class IrcListener extends ListenerAdapter {
     public void onKick(KickEvent event) {
         getDiscordChannel(event).sendMessage(
                 String.format("**\\*%s\\*** Kicked _%s_: %s",
-                        event.getUser().getNick(),
-                        event.getRecipient().getNick(),
+                        formatName(event.getUser()),
+                        formatName(event.getRecipient()),
                         event.getReason()
                 )
         ).queue();
@@ -118,7 +119,7 @@ public class IrcListener extends ListenerAdapter {
     public void onAction(ActionEvent event) {
         getDiscordChannel(event).sendMessage(
                 String.format("**\\*%s\\*** _%s_",
-                        event.getUser().getNick(),
+                        formatName(event.getUser()),
                         event.getMessage()
                 )
         ).queue();
@@ -128,7 +129,7 @@ public class IrcListener extends ListenerAdapter {
     public void onMode(ModeEvent event) {
         getDiscordChannel(event).sendMessage(
                 String.format("**\\*%s\\*** _%s_",
-                        event.getUser().getNick(),
+                        formatName(event.getUser()),
                         "Set mode " + event.getMode()
                 )
         ).queue();
@@ -141,7 +142,7 @@ public class IrcListener extends ListenerAdapter {
             TextChannel textChannel = Main.config[configID].channelMapObj.inverse().get(channel);
             textChannel.sendMessage(
                     String.format("**\\*%s\\*** _%s_",
-                            event.getUser().getNick(),
+                            formatName(event.getUser()),
                             "has quit: " + event.getReason().replace("http://www.mibbit.com", "<http://www.mibbit.com>")
                     )
             ).queue();
@@ -160,10 +161,17 @@ public class IrcListener extends ListenerAdapter {
             if (textChannel == null) {
                 continue;
             }
+            String oldNick, newNick;
+            oldNick = event.getOldNick();
+            newNick = event.getNewNick();
+            if (event.getUser().isIrcop()) {
+                oldNick = "__" + oldNick + "__";
+                newNick = "__" + newNick + "__";
+            }
             textChannel.sendMessage(
                     String.format("**\\*%s\\*** is now known as _%s_",
-                            event.getOldNick(),
-                            event.getNewNick()
+                            oldNick,
+                            newNick
                     )
             ).queue();
         }
@@ -203,10 +211,26 @@ public class IrcListener extends ListenerAdapter {
         return topUserLevel.getSymbol();
     }
 
+    private String formatName(User user) {
+        return formatName(user, false);
+    }
+
+    private String formatName(User user, boolean useHostmask) {
+        String ret = user.getNick();
+        if (useHostmask) {
+            ret = user.getHostmask();
+        }
+        if (user.isIrcop()) {
+            return "__" + ret + "__";
+        }
+        return ret;
+    }
+
     private String formatString(TextChannel channel, String strToFormat) {
         final char underline = '\u001F';
         final char italics = '\u001D';
         final char bold = '\u0002';
+        final char color = '\u0003';
         int underlineCount = StringUtils.countMatches(strToFormat, underline);
         int italicsCount = StringUtils.countMatches(strToFormat, italics);
         int boldCount = StringUtils.countMatches(strToFormat, bold);
@@ -240,6 +264,9 @@ public class IrcListener extends ListenerAdapter {
                     strLower = strToFormat.toLowerCase();
                 }
             }
+        }
+        if (strToFormat.contains(color + "")) {
+            strToFormat = strToFormat.replaceAll(color + "[0-9]{2}", "");
         }
         return strToFormat;
     }
