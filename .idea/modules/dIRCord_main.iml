@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module external.linked.project.id="dIRCord:main" external.linked.project.path="$MODULE_DIR$/../.." external.root.project.path="$MODULE_DIR$/../.." external.system.id="GRADLE" external.system.module.group="com.LilG" external.system.module.type="sourceSet" external.system.module.version="1.0" type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/../../build/classes/main" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../src/main">
@@ -10,15 +10,15 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.8.0" level="project" />
-    <orderEntry type="library" name="Gradle: net.dv8tion:JDA:3.0.BETA_106" level="project" />
+    <orderEntry type="library" name="Gradle: net.dv8tion:JDA:3.0.0_165" level="project" />
     <orderEntry type="library" name="Gradle: com.github.TheLQ:pircbotx:master-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:guava:19.0" level="project" />
     <orderEntry type="library" name="Gradle: ch.qos.logback:logback-classic:1.0.13" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.5" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-collections4:4.1" level="project" />
     <orderEntry type="library" name="Gradle: org.json:json:20160810" level="project" />
-    <orderEntry type="library" name="Gradle: net.java.dev.jna:jna:4.2.2" level="project" />
-    <orderEntry type="library" name="Gradle: com.neovisionaries:nv-websocket-client:1.30" level="project" />
+    <orderEntry type="library" name="Gradle: net.java.dev.jna:jna:4.4.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.neovisionaries:nv-websocket-client:1.31" level="project" />
     <orderEntry type="library" name="Gradle: com.mashape.unirest:unirest-java:1.4.9" level="project" />
     <orderEntry type="library" name="Gradle: org.slf4j:slf4j-api:1.7.13" level="project" />
     <orderEntry type="library" name="Gradle: commons-codec:commons-codec:1.10" level="project" />

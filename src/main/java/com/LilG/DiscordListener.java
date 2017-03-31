@@ -13,6 +13,8 @@ import org.pircbotx.Channel;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 import static com.LilG.utils.LilGUtil.startsWithAny;
@@ -21,124 +23,139 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
  * Created by lil-g on 12/12/16.
  */
 public class DiscordListener extends ListenerAdapter {
-    private final static char colorCode = '\u0003';
-    private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
-    private final byte configID;
+	private final static char colorCode = '\u0003';
+	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
+	private final byte configID;
 
-    public volatile boolean ready;
+	public volatile boolean ready;
 
-    DiscordListener(byte configID) {
-        this.configID = configID;
-    }
+	DiscordListener(byte configID) {
+		this.configID = configID;
+	}
 
-    @Override
-    public void onReady(ReadyEvent event) {
-        ready = true;
-        Main.config[configID].ircListener.fillChannelMap();
-    }
+	private static String formatString(String message) {
+		final char underline = '\u001F';
+		final char italics = '\u001D';
+		final char bold = '\u0002';
+		// find links
+		String[] parts = message.split("\\s+");
+		for (int i = 0, partsLength = parts.length; i < partsLength; i++) {
+			String item = parts[i];
+			try {
+				new URL(item);
+				// If possible then replace with anchor...
+				message = message.replace(parts[i], "%" + (i + 1) + "$s");
+			} catch (MalformedURLException ignored) {
+			}
+		}
 
-    public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
-        if (event.getMember().equals(event.getGuild().getSelfMember())) {
-            return;
-        }
-        String color = "";
-        if (Main.config[configID].ircNickColor) {
-            int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-            if (ircColorCode < 0) {
-                ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
-            }
-            color = colorCode + String.format("%02d", ircColorCode);
-        }
-        String message = event.getMessage().getContent();
-        Channel channel = Main.config[configID].channelMapObj.get(event.getChannel());
-        if (channel == null) {
-            return;
-        }
-        if (message.length() != 0) {
-            if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
-                channel.send().message(
-                        String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
-                                color,
-                                event.getMember().getEffectiveName(),
-                                colorCode
-                        )
-                );
-                channel.send().message(
-                        formatString(event.getMessage().getContent())
-                );
-            } else {
-                channel.send().message(
-                        String.format("<%s%s%c> %s",
-                                color,
-                                event.getMember().getEffectiveName(),
-                                colorCode,
-                                formatString(event.getMessage().getContent())
-                        )
-                );
-            }
-        }
-        List<Message.Attachment> attachments;
-        if ((attachments = event.getMessage().getAttachments()).size() != 0) {
-            StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
-                    color,
-                    event.getMember().getEffectiveName(),
-                    colorCode)
-            );
-            for (Message.Attachment attachment : attachments) {
-                embedMessage.append(" ").append(attachment.getUrl());
-            }
-            channel.send().message(embedMessage.toString());
-        }
-        Main.lastActivity = System.currentTimeMillis();
-    }
+		int underlineCount = StringUtils.countMatches(message, "__");
+		if (underlineCount > 1) {
+			if (underlineCount % 2 != 0) {
+				for (int count = 0; count < underlineCount; count++) {
+					message = message.replace("__", underline + "");
+				}
+			} else {
+				message = message.replace("__", underline + "");
+			}
+		}
+		int boldCount = StringUtils.countMatches(message, "**");
+		if (boldCount > 1) {
+			if (boldCount % 2 != 0) {
+				for (int count = 0; count < boldCount; count++) {
+					message = message.replace("**", bold + "");
+				}
+			} else {
+				message = message.replace("**", bold + "");
+			}
+		}
+		int italicsCount = StringUtils.countMatches(message, "_");
+		if (italicsCount > 1) {
+			if (italicsCount % 2 != 0) {
+				for (int count = 0; count < italicsCount; count++) {
+					message = message.replace("_", italics + "");
+				}
+			} else {
+				message = message.replace("_", italics + "");
+			}
+		}
+		italicsCount = StringUtils.countMatches(message, "*");
+		if (italicsCount > 1) {
+			if (italicsCount % 2 != 0) {
+				for (int count = 0; count < italicsCount; count++) {
+					message = message.replace("*", italics + "");
+				}
+			} else {
+				message = message.replace("*", italics + "");
+			}
+		}
+		message = message
+				.replace('\u0007', '␇')
+				.replace('\n', '␤')
+				.replace('\r', '␍');
+		return String.format(message, (Object[]) parts);
+	}
 
-    public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
+	@Override
+	public void onReady(ReadyEvent event) {
+		ready = true;
+		Main.config[configID].ircListener.fillChannelMap();
+	}
 
-        if (event.getMember().equals(event.getGuild().getSelfMember())) {
-            return;
-        }
-        for (TextChannel textChannel : event.getGuild().getTextChannels()) {
-            Channel channel = Main.config[configID].channelMapObj.get(textChannel);
-            if (channel == null) {
-                continue;
-            }
-            String color = "";
-            String secondColor = "";
-
-            String prevNick = event.getPrevNick();
-            String newNick = event.getNewNick();
-            String username = event.getMember().getUser().getName();
-            if (prevNick == null) {
-                prevNick = username;
-            } else if (newNick == null) {
-                newNick = username;
-            }
-            if (Main.config[configID].ircNickColor) {
-                boolean usingDiscordColor = true;
-                int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-                if (ircColorCode < 0) {
-                    ircColorCode = LilGUtil.hash(prevNick, 12) + 2;
-                    usingDiscordColor = false;
-                }
-                color = colorCode + String.format("%02d", ircColorCode);
-                if (!usingDiscordColor) {
-                    secondColor = colorCode + String.format("%02d", LilGUtil.hash(newNick, 12) + 2);
-                }
-            }
-
-            channel.send().message(String.format("\u001D*%s%s%c\u001D* %s%s%s%c",
-                    color,
-                    prevNick,
-                    colorCode,
-                    "Has changed nick to ",
-                    secondColor,
-                    newNick,
-                    colorCode
-                    )
-            )
-            ;
-        }
-    }
+	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
+		if (event.getMember().equals(event.getGuild().getSelfMember())) {
+			return;
+		}
+		String color = "";
+		if (Main.config[configID].ircNickColor) {
+			int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+			if (ircColorCode < 0) {
+				ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
+			}
+			color = colorCode + String.format("%02d", ircColorCode);
+		}
+		String message = event.getMessage().getContent();
+		Channel channel = Main.config[configID].channelMapObj.get(event.getChannel());
+		if (channel == null) {
+			return;
+		}
+		if (message.length() != 0) {
+			if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+				channel.send().message(
+						String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
+								color,
+								event.getMember().getEffectiveName(),
+								colorCode
+						)
+				);
+				channel.send().message(
+						formatString(event.getMessage().getContent())
+				);
+			} else {
+				channel.send().message(
+						String.format("<%s%s%c> %s",
+								color,
+								event.getMember().getEffectiveName(),
+								colorCode,
+								formatString(event.getMessage().getContent())
+						)
+				);
+			}
+		}
+		List<Message.Attachment> attachments;
+		if ((attachments = event.getMessage().getAttachments()).size() != 0) {
+			StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
+					color,
+					event.getMember().getEffectiveName(),
+					colorCode)
+			);
+			for (Message.Attachment attachment : attachments) {
+				embedMessage.append(" ").append(attachment.getUrl());
+			}
+			channel.send().message(embedMessage.toString());
+		}
+		Main.lastActivity = System.currentTimeMillis();
+	}
 
     /*public void onUserOnlineStatusUpdate(UserOnlineStatusUpdateEvent event) {
         if (event.getUser().equals(jda.getSelfUser())) {
@@ -174,94 +191,91 @@ public class DiscordListener extends ListenerAdapter {
         }
     }*/
 
-    private String formatString(String message) {
-        final char underline = '\u001F';
-        final char italics = '\u001D';
-        final char bold = '\u0002';
-        int underlineCount = StringUtils.countMatches(message, "__");
-        if (underlineCount > 1) {
-            if (underlineCount % 2 != 0) {
-                for (int count = 0; count < underlineCount; count++) {
-                    message = message.replace("__", underline + "");
-                }
-            } else {
-                message = message.replace("__", underline + "");
-            }
-        }
-        int boldCount = StringUtils.countMatches(message, "**");
-        if (boldCount > 1) {
-            if (boldCount % 2 != 0) {
-                for (int count = 0; count < boldCount; count++) {
-                    message = message.replace("**", bold + "");
-                }
-            } else {
-                message = message.replace("**", bold + "");
-            }
-        }
-        int italicsCount = StringUtils.countMatches(message, "_");
-        if (italicsCount > 1) {
-            if (italicsCount % 2 != 0) {
-                for (int count = 0; count < italicsCount; count++) {
-                    message = message.replace("_", italics + "");
-                }
-            } else {
-                message = message.replace("_", italics + "");
-            }
-        }
-        italicsCount = StringUtils.countMatches(message, "*");
-        if (italicsCount > 1) {
-            if (italicsCount % 2 != 0) {
-                for (int count = 0; count < italicsCount; count++) {
-                    message = message.replace("*", italics + "");
-                }
-            } else {
-                message = message.replace("*", italics + "");
-            }
-        }
-        message = message
-                .replace('\u0007', '␇')
-                .replace('\n', '␤')
-                .replace('\r', '␍');
-        return message;
-    }
+	public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
 
-    enum ColorMap {
-        turqoise(10, new Color(26, 188, 156)),
-        darkTurqoise(10, new Color(17, 128, 106)),
-        green(9, new Color(46, 204, 113)),
-        darkGreen(3, new Color(31, 139, 76)),
-        blue(10, new Color(52, 152, 219)),
-        darkBlue(2, new Color(32, 102, 148)),
-        purple(13, new Color(155, 89, 182)),
-        darkPurple(6, new Color(113, 54, 138)),
-        pink(13, new Color(233, 30, 99)),
-        darkPink(6, new Color(173, 20, 87)),
-        yellow(8, new Color(241, 196, 15)),
-        darkYellow(8, new Color(194, 124, 14)),
-        orange(7, new Color(230, 126, 34)),
-        darkOrange(7, new Color(168, 67, 0)),
-        red(4, new Color(231, 76, 60)),
-        darkRed(5, new Color(153, 45, 34)),
-        lightGray(0, new Color(149, 165, 166)),
-        gray(15, new Color(151, 156, 159)),
-        darkGray(14, new Color(96, 125, 139)),
-        darkerGray(1, new Color(84, 110, 122));
+		if (event.getMember().equals(event.getGuild().getSelfMember())) {
+			return;
+		}
+		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
+			Channel channel = Main.config[configID].channelMapObj.get(textChannel);
+			if (channel == null) {
+				continue;
+			}
+			String color = "";
+			String secondColor = "";
 
-        byte ircColor;
-        Color color;
+			String prevNick = event.getPrevNick();
+			String newNick = event.getNewNick();
+			String username = event.getMember().getUser().getName();
+			if (prevNick == null) {
+				prevNick = username;
+			} else if (newNick == null) {
+				newNick = username;
+			}
+			if (Main.config[configID].ircNickColor) {
+				boolean usingDiscordColor = true;
+				int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+				if (ircColorCode < 0) {
+					ircColorCode = LilGUtil.hash(prevNick, 12) + 2;
+					usingDiscordColor = false;
+				}
+				color = colorCode + String.format("%02d", ircColorCode);
+				if (!usingDiscordColor) {
+					secondColor = colorCode + String.format("%02d", LilGUtil.hash(newNick, 12) + 2);
+				}
+			}
 
-        ColorMap(int ircColor, Color color) {
-            this.ircColor = (byte) ircColor;
-            this.color = color;
-        }
+			channel.send().message(String.format("\u001D*%s%s%c\u001D* %s%s%s%c",
+					color,
+					prevNick,
+					colorCode,
+					"Has changed nick to ",
+					secondColor,
+					newNick,
+					colorCode
+					)
+			)
+			;
+		}
+	}
 
-        static int valueOf(Color color) {
-            for (ColorMap map : ColorMap.values()) {
-                if (map.color.equals(color)) {
-                    return map.ircColor;
-                }
-            }
-            return -1;
-        }
-    }
+	enum ColorMap {
+		turquoise(10, new Color(26, 188, 156)),
+		darkTurquoise(10, new Color(17, 128, 106)),
+		green(9, new Color(46, 204, 113)),
+		darkGreen(3, new Color(31, 139, 76)),
+		blue(10, new Color(52, 152, 219)),
+		darkBlue(2, new Color(32, 102, 148)),
+		purple(13, new Color(155, 89, 182)),
+		darkPurple(6, new Color(113, 54, 138)),
+		pink(13, new Color(233, 30, 99)),
+		darkPink(6, new Color(173, 20, 87)),
+		yellow(8, new Color(241, 196, 15)),
+		darkYellow(8, new Color(194, 124, 14)),
+		orange(7, new Color(230, 126, 34)),
+		darkOrange(7, new Color(168, 67, 0)),
+		red(4, new Color(231, 76, 60)),
+		darkRed(5, new Color(153, 45, 34)),
+		lightGray(0, new Color(149, 165, 166)),
+		gray(15, new Color(151, 156, 159)),
+		darkGray(14, new Color(96, 125, 139)),
+		darkerGray(1, new Color(84, 110, 122));
+
+		byte ircColor;
+		Color color;
+
+		ColorMap(int ircColor, Color color) {
+			this.ircColor = (byte) ircColor;
+			this.color = color;
+		}
+
+		static int valueOf(Color color) {
+			for (ColorMap map : ColorMap.values()) {
+				if (map.color.equals(color)) {
+					return map.ircColor;
+				}
+			}
+			return -1;
+		}
+	}
 }

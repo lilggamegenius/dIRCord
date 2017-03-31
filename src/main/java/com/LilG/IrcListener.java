@@ -35,6 +35,98 @@ public class IrcListener extends ListenerAdapter {
 
     }
 
+	public static String getUserSymbol(MessageEvent event) {
+		return getUserSymbol(event, event.getChannel(), event.getUser());
+	}
+
+	public static String getUserSymbol(MessageEvent event, User user) {
+		return getUserSymbol(event, event.getChannel(), user);
+	}
+
+	public static String getUserSymbol(MessageEvent event, Channel channel) {
+		return getUserSymbol(event, channel, event.getUser());
+	}
+
+	public static String getUserSymbol(MessageEvent event, Channel channel, User user) {
+		ImmutableSortedSet<UserLevel> userLevels = user.getUserLevels(channel);
+		UserLevel topUserLevel = null;
+		for (UserLevel userLevel : userLevels) {
+			if (topUserLevel != null) {
+				if (topUserLevel.ordinal() < userLevel.ordinal()) {
+					topUserLevel = userLevel;
+				}
+			} else {
+				topUserLevel = userLevel;
+			}
+		}
+		if (topUserLevel == null) {
+			return "";
+		}
+		return topUserLevel.getSymbol();
+	}
+
+	private static String formatName(User user) {
+		return formatName(user, false);
+	}
+
+	private static String formatName(User user, boolean useHostmask) {
+		String ret = user.getNick();
+		if (useHostmask) {
+			ret = user.getHostmask();
+		}
+		if (user.isIrcop()) {
+			return "__" + ret + "__";
+		}
+		return ret;
+	}
+
+	private static String formatString(TextChannel channel, String strToFormat) {
+		final char underline = '\u001F';
+		final char italics = '\u001D';
+		final char bold = '\u0002';
+		final char color = '\u0003';
+		int underlineCount = StringUtils.countMatches(strToFormat, underline);
+		int italicsCount = StringUtils.countMatches(strToFormat, italics);
+		int boldCount = StringUtils.countMatches(strToFormat, bold);
+		if (underlineCount != 0) {
+			strToFormat = strToFormat.replace(underline + "", "__");
+			if (underlineCount % 2 != 0) {
+				strToFormat += "__";
+			}
+		}
+		if (italicsCount != 0) {
+			strToFormat = strToFormat.replace(italics + "", "_");
+			if (italicsCount % 2 != 0) {
+				strToFormat += "_";
+			}
+		}
+		if (boldCount != 0) {
+			strToFormat = strToFormat.replace(bold + "", "**");
+			if (boldCount % 2 != 0) {
+				strToFormat += "**";
+			}
+		}
+		if (strToFormat.contains("@")) {
+			strToFormat = strToFormat.replace("@everyone", "`@everyone`");
+			String strLower = strToFormat.toLowerCase();
+			for (Member member : channel.getMembers()) {
+				String memberName = member.getEffectiveName().toLowerCase();
+				while (strLower.contains("@" + memberName)) {
+					int index = strLower.indexOf(memberName);
+					strToFormat = strToFormat.substring(0, index - 1) +
+							member.getAsMention() +
+							strToFormat.substring(index + memberName.length());
+					strLower = strToFormat.toLowerCase();
+				}
+			}
+		}
+		if (strToFormat.contains(color + "")) {
+			strToFormat = strToFormat.replaceAll(color + "[0-9]{2}", "");
+		}
+
+		return strToFormat;
+	}
+
     @Override
     public void onEvent(Event event) throws Exception {
         super.onEvent(event);
@@ -156,7 +248,8 @@ public class IrcListener extends ListenerAdapter {
 
     @Override
     public void onNickChange(NickChangeEvent event) throws Exception {
-        for (Channel channel : event.getUser().getChannels()) {
+	    //noinspection ConstantConditions
+	    for (Channel channel : event.getUser().getChannels()) {
             TextChannel textChannel = Main.config[configID].channelMapObj.inverse().get(channel);
             if (textChannel == null) {
                 continue;
@@ -179,96 +272,6 @@ public class IrcListener extends ListenerAdapter {
 
     public TextChannel getDiscordChannel(GenericChannelEvent event) {
         return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
-    }
-
-    public String getUserSymbol(MessageEvent event) {
-        return getUserSymbol(event, event.getChannel(), event.getUser());
-    }
-
-    public String getUserSymbol(MessageEvent event, User user) {
-        return getUserSymbol(event, event.getChannel(), user);
-    }
-
-    public String getUserSymbol(MessageEvent event, Channel channel) {
-        return getUserSymbol(event, channel, event.getUser());
-    }
-
-    public String getUserSymbol(MessageEvent event, Channel channel, User user) {
-        ImmutableSortedSet<UserLevel> userLevels = user.getUserLevels(channel);
-        UserLevel topUserLevel = null;
-        for (UserLevel userLevel : userLevels) {
-            if (topUserLevel != null) {
-                if (topUserLevel.ordinal() < userLevel.ordinal()) {
-                    topUserLevel = userLevel;
-                }
-            } else {
-                topUserLevel = userLevel;
-            }
-        }
-        if (topUserLevel == null) {
-            return "";
-        }
-        return topUserLevel.getSymbol();
-    }
-
-    private String formatName(User user) {
-        return formatName(user, false);
-    }
-
-    private String formatName(User user, boolean useHostmask) {
-        String ret = user.getNick();
-        if (useHostmask) {
-            ret = user.getHostmask();
-        }
-        if (user.isIrcop()) {
-            return "__" + ret + "__";
-        }
-        return ret;
-    }
-
-    private String formatString(TextChannel channel, String strToFormat) {
-        final char underline = '\u001F';
-        final char italics = '\u001D';
-        final char bold = '\u0002';
-        final char color = '\u0003';
-        int underlineCount = StringUtils.countMatches(strToFormat, underline);
-        int italicsCount = StringUtils.countMatches(strToFormat, italics);
-        int boldCount = StringUtils.countMatches(strToFormat, bold);
-        if (underlineCount != 0) {
-            strToFormat = strToFormat.replace(underline + "", "__");
-            if (underlineCount % 2 != 0) {
-                strToFormat += "__";
-            }
-        }
-        if (italicsCount != 0) {
-            strToFormat = strToFormat.replace(italics + "", "_");
-            if (italicsCount % 2 != 0) {
-                strToFormat += "_";
-            }
-        }
-        if (boldCount != 0) {
-            strToFormat = strToFormat.replace(bold + "", "**");
-            if (boldCount % 2 != 0) {
-                strToFormat += "**";
-            }
-        }
-        if (strToFormat.contains("@")) {
-            String strLower = strToFormat.toLowerCase();
-            for (Member member : channel.getMembers()) {
-                String memberName = member.getEffectiveName().toLowerCase();
-                while (strLower.contains("@" + memberName)) {
-                    int index = strLower.indexOf(memberName);
-                    strToFormat = strToFormat.substring(0, index - 1) +
-                            member.getAsMention() +
-                            strToFormat.substring(index + memberName.length());
-                    strLower = strToFormat.toLowerCase();
-                }
-            }
-        }
-        if (strToFormat.contains(color + "")) {
-            strToFormat = strToFormat.replaceAll(color + "[0-9]{2}", "");
-        }
-        return strToFormat;
     }
 
     public void fillChannelMap() {
