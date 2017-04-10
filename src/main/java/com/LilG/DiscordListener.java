@@ -1,5 +1,4 @@
 package com.LilG;
-
 import ch.qos.logback.classic.Logger;
 import com.LilG.utils.LilGUtil;
 import net.dv8tion.jda.core.entities.Message;
@@ -8,15 +7,13 @@ import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
-import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.Channel;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
 
+import static com.LilG.Bridge.formatString;
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
 /**
@@ -26,74 +23,21 @@ public class DiscordListener extends ListenerAdapter {
 	private final static char colorCode = '\u0003';
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
 	private final byte configID;
-
 	public volatile boolean ready;
 
 	DiscordListener(byte configID) {
 		this.configID = configID;
 	}
 
-	private static String formatString(String message) {
-		final char underline = '\u001F';
-		final char italics = '\u001D';
-		final char bold = '\u0002';
-		// find links
-		String[] parts = message.split("\\s+");
-		for (int i = 0, partsLength = parts.length; i < partsLength; i++) {
-			String item = parts[i];
-			try {
-				new URL(item);
-				// If possible then replace with anchor...
-				message = message.replace(parts[i], "%" + (i + 1) + "$s");
-			} catch (MalformedURLException ignored) {
-			}
+	public boolean handleCommand(GuildMessageReceivedEvent event) {
+		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
+		if (message[0].startsWith(event.getGuild().getSelfMember().getEffectiveName()) ||
+				message[0].startsWith(event.getGuild().getSelfMember().getAsMention())
+				) {
+			Bridge.handleCommand(message, event, configID, false);
+			return true;
 		}
-
-		int underlineCount = StringUtils.countMatches(message, "__");
-		if (underlineCount > 1) {
-			if (underlineCount % 2 != 0) {
-				for (int count = 0; count < underlineCount; count++) {
-					message = message.replace("__", underline + "");
-				}
-			} else {
-				message = message.replace("__", underline + "");
-			}
-		}
-		int boldCount = StringUtils.countMatches(message, "**");
-		if (boldCount > 1) {
-			if (boldCount % 2 != 0) {
-				for (int count = 0; count < boldCount; count++) {
-					message = message.replace("**", bold + "");
-				}
-			} else {
-				message = message.replace("**", bold + "");
-			}
-		}
-		int italicsCount = StringUtils.countMatches(message, "_");
-		if (italicsCount > 1) {
-			if (italicsCount % 2 != 0) {
-				for (int count = 0; count < italicsCount; count++) {
-					message = message.replace("_", italics + "");
-				}
-			} else {
-				message = message.replace("_", italics + "");
-			}
-		}
-		italicsCount = StringUtils.countMatches(message, "*");
-		if (italicsCount > 1) {
-			if (italicsCount % 2 != 0) {
-				for (int count = 0; count < italicsCount; count++) {
-					message = message.replace("*", italics + "");
-				}
-			} else {
-				message = message.replace("*", italics + "");
-			}
-		}
-		message = message
-				.replace('\u0007', '␇')
-				.replace('\n', '␤')
-				.replace('\r', '␍');
-		return String.format(message, (Object[]) parts);
+		return false;
 	}
 
 	@Override
@@ -102,8 +46,13 @@ public class DiscordListener extends ListenerAdapter {
 		Main.config[configID].ircListener.fillChannelMap();
 	}
 
+	public Channel getIRCChannel(GuildMessageReceivedEvent event) {
+		return Main.config[configID].channelMapObj.get(event.getChannel());
+	}
+
 	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
-		if (event.getMember().equals(event.getGuild().getSelfMember())) {
+		if (event.getMember().equals(event.getGuild().getSelfMember()) ||
+				handleCommand(event)) {
 			return;
 		}
 		String color = "";
@@ -115,7 +64,7 @@ public class DiscordListener extends ListenerAdapter {
 			color = colorCode + String.format("%02d", ircColorCode);
 		}
 		String message = event.getMessage().getContent();
-		Channel channel = Main.config[configID].channelMapObj.get(event.getChannel());
+		Channel channel = getIRCChannel(event);
 		if (channel == null) {
 			return;
 		}

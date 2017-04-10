@@ -2,12 +2,11 @@ package com.LilG;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.LilG.utils.LilGUtil;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableSortedSet;
 import net.dv8tion.jda.core.entities.Guild;
-import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.TextChannel;
-import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.Channel;
 import org.pircbotx.User;
 import org.pircbotx.UserLevel;
@@ -17,6 +16,7 @@ import org.pircbotx.hooks.events.*;
 import org.pircbotx.hooks.types.GenericChannelEvent;
 import org.slf4j.LoggerFactory;
 
+import static com.LilG.Bridge.formatString;
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
 /**
@@ -29,10 +29,6 @@ public class IrcListener extends ListenerAdapter {
 
     IrcListener(byte configID) {
         this.configID = configID;
-    }
-
-    public static void handleCommand(MessageEvent event) {
-
     }
 
 	public static String getUserSymbol(MessageEvent event) {
@@ -80,51 +76,15 @@ public class IrcListener extends ListenerAdapter {
 		return ret;
 	}
 
-	private static String formatString(TextChannel channel, String strToFormat) {
-		final char underline = '\u001F';
-		final char italics = '\u001D';
-		final char bold = '\u0002';
-		final char color = '\u0003';
-		int underlineCount = StringUtils.countMatches(strToFormat, underline);
-		int italicsCount = StringUtils.countMatches(strToFormat, italics);
-		int boldCount = StringUtils.countMatches(strToFormat, bold);
-		if (underlineCount != 0) {
-			strToFormat = strToFormat.replace(underline + "", "__");
-			if (underlineCount % 2 != 0) {
-				strToFormat += "__";
+	public boolean handleCommand(MessageEvent event) {
+		String[] message = LilGUtil.splitMessage(event.getMessage());
+		if (message.length > 0) {
+			if (message[0].startsWith(event.getBot().getNick())) {
+				Bridge.handleCommand(message, event, configID, true);
+				return true;
 			}
 		}
-		if (italicsCount != 0) {
-			strToFormat = strToFormat.replace(italics + "", "_");
-			if (italicsCount % 2 != 0) {
-				strToFormat += "_";
-			}
-		}
-		if (boldCount != 0) {
-			strToFormat = strToFormat.replace(bold + "", "**");
-			if (boldCount % 2 != 0) {
-				strToFormat += "**";
-			}
-		}
-		if (strToFormat.contains("@")) {
-			strToFormat = strToFormat.replace("@everyone", "`@everyone`");
-			String strLower = strToFormat.toLowerCase();
-			for (Member member : channel.getMembers()) {
-				String memberName = member.getEffectiveName().toLowerCase();
-				while (strLower.contains("@" + memberName)) {
-					int index = strLower.indexOf(memberName);
-					strToFormat = strToFormat.substring(0, index - 1) +
-							member.getAsMention() +
-							strToFormat.substring(index + memberName.length());
-					strLower = strToFormat.toLowerCase();
-				}
-			}
-		}
-		if (strToFormat.contains(color + "")) {
-			strToFormat = strToFormat.replaceAll(color + "[0-9]{2}", "");
-		}
-
-		return strToFormat;
+		return false;
 	}
 
     @Override
@@ -154,13 +114,15 @@ public class IrcListener extends ListenerAdapter {
                     message1 -> channel.sendMessage(formatString(channel, message)).queue()
             );
         } else {
-            channel.sendMessage(
-                    String.format("**<%s%s>** %s",
-                            getUserSymbol(event),
-                            formatName(event.getUser()),
-                            formatString(channel, message)
-                    )
-            ).queue();
+	        if (!handleCommand(event)) {
+		        channel.sendMessage(
+				        String.format("**<%s%s>** %s",
+						        getUserSymbol(event),
+						        formatName(event.getUser()),
+						        formatString(channel, message)
+				        )
+		        ).queue();
+	        }
         }
         Main.lastActivity = System.currentTimeMillis();
     }

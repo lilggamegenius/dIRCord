@@ -96,7 +96,7 @@ public class Main {
                         .setAutoReconnect(true)
                         .setAudioEnabled(true)
                         .setEnableShutdownHook(true)
-                        .addListener(config.discordListener)
+                        .addEventListener(config.discordListener)
                         .buildAsync();
             }
         } catch (JsonSyntaxException e) {

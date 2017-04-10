@@ -38,6 +38,7 @@ public class Configuration {
     public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
     public transient IrcListener ircListener;
     public transient DiscordListener discordListener;
+    public transient Bridge bridge;
     public transient PircBotX pircBotX;
     public transient JDA jda;
 }
