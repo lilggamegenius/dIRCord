@@ -31,11 +31,16 @@ public class DiscordListener extends ListenerAdapter {
 
 	public boolean handleCommand(GuildMessageReceivedEvent event) {
 		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
+		if (message == null || message[0] == null) {
+			return false;
+		}
 		if (message[0].startsWith(event.getGuild().getSelfMember().getEffectiveName()) ||
 				message[0].startsWith(event.getGuild().getSelfMember().getAsMention())
 				) {
-			Bridge.handleCommand(message, event, configID, false);
-			return true;
+			if (getIRCChannel(event) != null) {
+				Bridge.handleCommand(message, event, configID, false);
+				return true;
+			}
 		}
 		return false;
 	}
@@ -51,57 +56,77 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
-		if (event.getMember().equals(event.getGuild().getSelfMember()) ||
-				handleCommand(event)) {
-			return;
-		}
-		String color = "";
-		if (Main.config[configID].ircNickColor) {
-			int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-			if (ircColorCode < 0) {
-				ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
+		try {
+			String discordNick = "Error nick";
+			String discordUsername = "Error UserName";
+			String discordHostmask = "Error Hostmask";
+			try {
+				discordNick = event.getMember().getEffectiveName();
+				discordUsername = event.getMember().getUser().getName();
+				discordHostmask = event.getMember().getUser().getId();
+			} catch (NullPointerException e) {
+				discordNick = event.getAuthor().getName();
+				discordUsername = discordNick;
+				discordHostmask = event.getAuthor().getId();
+			} catch (Exception e) {
+				LOGGER.error("Error receiving message", e);
 			}
-			color = colorCode + String.format("%02d", ircColorCode);
-		}
-		String message = event.getMessage().getContent();
-		Channel channel = getIRCChannel(event);
-		if (channel == null) {
-			return;
-		}
-		if (message.length() != 0) {
-			if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
-				channel.send().message(
-						String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
-								color,
-								event.getMember().getEffectiveName(),
-								colorCode
-						)
-				);
-				channel.send().message(
-						formatString(event.getMessage().getContent())
-				);
-			} else {
-				channel.send().message(
-						String.format("<%s%s%c> %s",
-								color,
-								event.getMember().getEffectiveName(),
-								colorCode,
-								formatString(event.getMessage().getContent())
-						)
-				);
+			LOGGER.info(String.format("#%s: <%s!%s@%s> %s", event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getRawContent()));
+
+			if (event.getMember().equals(event.getGuild().getSelfMember()) ||
+					handleCommand(event)) {
+				return;
 			}
-		}
-		List<Message.Attachment> attachments;
-		if ((attachments = event.getMessage().getAttachments()).size() != 0) {
-			StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
-					color,
-					event.getMember().getEffectiveName(),
-					colorCode)
-			);
-			for (Message.Attachment attachment : attachments) {
-				embedMessage.append(" ").append(attachment.getUrl());
+			String color = "";
+			if (Main.config[configID].ircNickColor) {
+				int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
+				if (ircColorCode < 0) {
+					ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
+				}
+				color = colorCode + String.format("%02d", ircColorCode);
 			}
-			channel.send().message(embedMessage.toString());
+			String message = event.getMessage().getContent();
+			Channel channel = getIRCChannel(event);
+			if (channel == null) {
+				return;
+			}
+			if (message.length() != 0) {
+				if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+					channel.send().message(
+							String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
+									color,
+									event.getMember().getEffectiveName(),
+									colorCode
+							)
+					);
+					channel.send().message(
+							formatString(event.getMessage().getContent())
+					);
+				} else {
+					channel.send().message(
+							String.format("<%s%s%c> %s",
+									color,
+									event.getMember().getEffectiveName(),
+									colorCode,
+									formatString(event.getMessage().getContent())
+							)
+					);
+				}
+			}
+			List<Message.Attachment> attachments;
+			if ((attachments = event.getMessage().getAttachments()).size() != 0) {
+				StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
+						color,
+						event.getMember().getEffectiveName(),
+						colorCode)
+				);
+				for (Message.Attachment attachment : attachments) {
+					embedMessage.append(" ").append(attachment.getUrl());
+				}
+				channel.send().message(embedMessage.toString());
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error in DiscordListener\n", e);
 		}
 		Main.lastActivity = System.currentTimeMillis();
 	}

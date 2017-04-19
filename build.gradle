@@ -1,6 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'idea'
+//apply plugin: "com.github.johnrengelman.shadow"
 
 group 'com.LilG'
 version '1.0'

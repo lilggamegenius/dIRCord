@@ -1,6 +1,8 @@
 package com.LilG;
 
 import ch.qos.logback.classic.Logger;
+import com.LilG.utils.LilGUtil;
+import com.google.common.collect.ImmutableSortedSet;
 import net.dv8tion.jda.core.OnlineStatus;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Game;
@@ -9,6 +11,9 @@ import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
+import org.pircbotx.Channel;
+import org.pircbotx.User;
+import org.pircbotx.UserLevel;
 import org.pircbotx.hooks.events.MessageEvent;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +100,46 @@ public class Bridge {
 							event.respond(String.format("No one with the name \"%s\" was found", name));
 						}
 					} else {
-						sendMessage(eventObj, "Currently unimplemented", IRC); // todo
+						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+						String nick, username, hostname;
+						String hostmask, realname, awayMsg, server;
+						boolean away;
+						for (User user : Main.config[configID].discordListener.getIRCChannel(event).getUsers()) {
+							nick = user.getNick();
+							username = user.getLogin();
+							hostname = user.getHostname();
+							if (!(LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)))
+								continue;
+							realname = user.getRealName();
+							hostmask = user.getHostmask();
+							away = user.isAway();
+							awayMsg = user.getAwayMessage();
+							server = user.getServer();
+							StringBuilder channelsBuilder = new StringBuilder();
+							boolean first = true;
+							for (Channel channel : user.getChannels()) {
+								UserLevel userLevel = getUserLevel(channel.getUserLevels(user));
+								if (!first) {
+									channelsBuilder.append(", ");
+								}
+								if (userLevel == null) {
+									channelsBuilder.append(channel.getName());
+								} else {
+									channelsBuilder.append(userLevel.getSymbol()).append(channel.getName());
+								}
+								first = false;
+							}
+							sendMessage(eventObj, String.format(
+									"```\n" +
+											"%s is %s\n" +
+											"%1$s's real name: %s\n" +
+											"%s" +
+											"%1$s's channels: %s\n" +
+											"%1$s's server: %s\n" +
+											"```", nick, hostmask, realname, away ? nick + " Is away: " + awayMsg : "", channelsBuilder.toString(), server
+							), IRC);
+							break;
+						}
 					}
 				} else {
 					sendMessage(eventObj, "Missing argument", IRC);
@@ -120,7 +164,23 @@ public class Bridge {
 							event.respond(String.format("No one with the name \"%s\" was found", name));
 						}
 					} else {
-						sendMessage(eventObj, "Currently unimplemented", IRC); // todo
+						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+						String nick, username, hostname;
+						User user = null;
+						for (User curUser : Main.config[configID].discordListener.getIRCChannel(event).getUsers()) {
+							nick = curUser.getNick();
+							username = curUser.getLogin();
+							hostname = curUser.getHostname();
+							if (LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)) {
+								user = curUser;
+								break;
+							}
+						}
+						if (user != null) {
+							sendMessage(eventObj, user.getNick() + " Is online", IRC);
+						} else {
+							sendMessage(eventObj, name + " Is not online", IRC);
+						}
 					}
 				}
 			}
@@ -180,6 +240,21 @@ public class Bridge {
 		}
 	}
 
+	private static UserLevel getUserLevel(ImmutableSortedSet<UserLevel> levels) {
+		int ret = 0;
+		if (levels.isEmpty()) {
+			return null;
+		} else {
+			for (UserLevel level : levels) {
+				int levelNum = level.ordinal();
+				ret = ret < levelNum ? levelNum : ret;
+			}
+		}
+		if (ret == 0) {
+			return null;
+		}
+		return UserLevel.values()[ret - 1];
+	}
 
 	public static String formatString(TextChannel channel, String strToFormat) {
 		final char underline = '\u001F';

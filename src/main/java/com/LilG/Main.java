@@ -94,10 +94,10 @@ public class Main {
                 config.jda = new JDABuilder(AccountType.BOT)
                         .setToken(token)
                         .setAutoReconnect(true)
-                        .setAudioEnabled(true)
                         .setEnableShutdownHook(true)
                         .addEventListener(config.discordListener)
-                        .buildAsync();
+                        .buildBlocking();
+                LOGGER.trace("JDA built\n" + config.jda);
             }
         } catch (JsonSyntaxException e) {
             try (FileWriter emptyFile = new FileWriter(new File("EmptyConfig.json"))) {

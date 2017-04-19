@@ -80,8 +80,10 @@ public class IrcListener extends ListenerAdapter {
 		String[] message = LilGUtil.splitMessage(event.getMessage());
 		if (message.length > 0) {
 			if (message[0].startsWith(event.getBot().getNick())) {
-				Bridge.handleCommand(message, event, configID, true);
-				return true;
+				if (getDiscordChannel(event) != null) {
+					Bridge.handleCommand(message, event, configID, true);
+					return true;
+				}
 			}
 		}
 		return false;
@@ -100,30 +102,41 @@ public class IrcListener extends ListenerAdapter {
 
     @Override
     public void onMessage(MessageEvent event) {
-        Main.config[configID].pircBotX = event.getBot();
-        String message = event.getMessage();
-        TextChannel channel = getDiscordChannel(event);
-
-        if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
-            channel.sendMessage(
-                    String.format("_Command Sent by_ `%s%s`",
-                            getUserSymbol(event),
-                            formatName(event.getUser(), true)
-                    )
-            ).queue(
-                    message1 -> channel.sendMessage(formatString(channel, message)).queue()
-            );
-        } else {
-	        if (!handleCommand(event)) {
-		        channel.sendMessage(
-				        String.format("**<%s%s>** %s",
-						        getUserSymbol(event),
-						        formatName(event.getUser()),
-						        formatString(channel, message)
-				        )
-		        ).queue();
-	        }
-        }
+	    try {
+		    Main.config[configID].pircBotX = event.getBot();
+		    String message = event.getMessage();
+		    TextChannel channel = getDiscordChannel(event);
+		    for (int tries = 0; channel == null; tries++) {
+			    if (tries > 10) {
+				    event.respond("Failed sending message to discord, tell Lil-G about it");
+				    return;
+			    }
+			    channel = getDiscordChannel(event);
+		    }
+		    if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+			    TextChannel finalChannel = channel;
+			    channel.sendMessage(
+					    String.format("_Command Sent by_ `%s%s`",
+							    getUserSymbol(event),
+							    formatName(event.getUser(), true)
+					    )
+			    ).queue(
+					    message1 -> finalChannel.sendMessage(formatString(finalChannel, message)).queue()
+			    );
+		    } else {
+			    if (!handleCommand(event)) {
+				    channel.sendMessage(
+						    String.format("**<%s%s>** %s",
+								    getUserSymbol(event),
+								    formatName(event.getUser()),
+								    formatString(channel, message)
+						    )
+				    ).queue();
+			    }
+		    }
+	    } catch (Exception e) {
+		    LOGGER.error("Error in IrcListener\n", e);
+	    }
         Main.lastActivity = System.currentTimeMillis();
     }
 
@@ -240,6 +253,10 @@ public class IrcListener extends ListenerAdapter {
         if (Main.config[configID].pircBotX == null || Main.config[configID].pircBotX.getUserBot().getChannels().size() == 0 || !ready) {
             return;
         }
+	    if (Main.config[configID].jda == null) {
+		    LOGGER.warn("JDA is null");
+		    return;
+	    }
         BiMap<String, String> ircDiscordChanMap = ((BiMap<String, String>) Main.config[configID].channelMapping).inverse();
         for (Channel channel : Main.config[configID].pircBotX.getUserBot().getChannels()) {
             for (Guild guild : Main.config[configID].jda.getGuilds()) {
@@ -250,5 +267,6 @@ public class IrcListener extends ListenerAdapter {
                 }
             }
         }
+	    LOGGER.info("Filled channel map");
     }
 }
