@@ -31,7 +31,7 @@ public class DiscordListener extends ListenerAdapter {
 
 	public boolean handleCommand(GuildMessageReceivedEvent event) {
 		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
-		if (message == null || message[0] == null) {
+		if (message == null) {
 			return false;
 		}
 		if (message[0].startsWith(event.getGuild().getSelfMember().getEffectiveName()) ||
