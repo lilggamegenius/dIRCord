@@ -185,6 +185,15 @@ public class Bridge {
 				}
 			}
 			break;
+			case "topic": {
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					sendMessage(eventObj, String.format("Topic: \"%s\" set by %s at %s", event.getChannel().getTopic(), event.getChannel().getTopicSetter(), event.getChannel().getTopicTimestamp()), IRC);
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					sendMessage(eventObj, String.format("Topic: %s", event.getChannel().getTopic()), IRC);
+				}
+			}
 		}
 	}
 

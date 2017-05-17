@@ -97,6 +97,9 @@ public class IrcListener extends ListenerAdapter {
 
     public void onConnect(ConnectEvent event) {
         Main.config[configID].pircBotX = event.getBot();
+        for (String string : Main.config[configID].autoSendCommands) {
+            event.getBot().sendRaw().rawLine(string);
+        }
         ready = true;
     }
 
@@ -218,7 +221,9 @@ public class IrcListener extends ListenerAdapter {
 
     @Override
     public void onTopic(TopicEvent event) {
-
+        TextChannel channel = getDiscordChannel(event);
+        if (channel == null) return; //only possible if IRC-OP sajoins bot to another channel
+        channel.sendMessage("%s has changed topic to: `%s`", event.getUser().getHostmask(), event.getTopic()).queue();
     }
 
     @Override

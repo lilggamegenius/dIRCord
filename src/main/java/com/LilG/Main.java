@@ -34,7 +34,7 @@ public class Main {
         LOGGER.setLevel(Level.ALL);
         new Thread(() -> {
             try {
-                LOGGER.trace("Starting thread");
+                LOGGER.trace("Starting updater thread");
                 while (!Thread.currentThread().isInterrupted()) {
                     Thread.sleep(60 * 1000);
                     if (Main.lastActivity + 1000 * 60 * 10 < System.currentTimeMillis()) {
@@ -80,6 +80,9 @@ public class Main {
                     } else {
                         configBuilder.addAutoJoinChannel(channelValues[0]);
                     }
+                }
+                if (config.floodProtection) {
+                    configBuilder.setMessageDelay(config.floodProtectionDelay);
                 }
                 if (config.SSL) {
                     configBuilder.setSocketFactory(new UtilSSLSocketFactory().trustAllCertificates());

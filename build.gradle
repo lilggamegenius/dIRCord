@@ -1,7 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'idea'
-//apply plugin: "com.github.johnrengelman.shadow"
 
 group 'com.LilG'
 version '1.0'
@@ -21,4 +20,6 @@ dependencies {
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.0.13'
 
     compile 'java-oo:javac8-oo-plugin:0.5'
+
+    compile fileTree(dir: 'C#')
 }

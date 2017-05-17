@@ -1,9 +1,12 @@
 package com.LilG;
+
 import ch.qos.logback.classic.Logger;
 import com.LilG.utils.LilGUtil;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.ReadyEvent;
+import net.dv8tion.jda.core.events.channel.text.GenericTextChannelEvent;
+import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateTopicEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
@@ -54,6 +57,10 @@ public class DiscordListener extends ListenerAdapter {
 	public Channel getIRCChannel(GuildMessageReceivedEvent event) {
 		return Main.config[configID].channelMapObj.get(event.getChannel());
 	}
+
+    public Channel getIRCChannel(GenericTextChannelEvent event) {
+        return Main.config[configID].channelMapObj.get(event.getChannel());
+    }
 
 	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
 		try {
@@ -164,6 +171,15 @@ public class DiscordListener extends ListenerAdapter {
             }
         }
     }*/
+
+    @Override
+    public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
+        Channel channel = getIRCChannel(event);
+        if (channel == null) {
+            return;
+        }
+        channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
+    }
 
 	public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
 
