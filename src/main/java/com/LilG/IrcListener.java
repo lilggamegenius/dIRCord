@@ -213,7 +213,9 @@ public class IrcListener extends ListenerAdapter {
             textChannel.sendMessage(
                     String.format("**\\*%s\\*** _%s_",
                             formatName(event.getUser()),
-                            "has quit: " + event.getReason().replace("http://www.mibbit.com", "<http://www.mibbit.com>")
+		                    "has quit: " + event.getReason()
+				                    .replace("http://www.mibbit.com", "<http://www.mibbit.com>")
+				                    .replace("http://www.androirc.com/", "<http://www.androirc.com/>")
                     )
             ).queue();
         }
@@ -223,7 +225,7 @@ public class IrcListener extends ListenerAdapter {
     public void onTopic(TopicEvent event) {
         TextChannel channel = getDiscordChannel(event);
         if (channel == null) return; //only possible if IRC-OP sajoins bot to another channel
-        channel.sendMessage("%s has changed topic to: `%s`", event.getUser().getHostmask(), event.getTopic()).queue();
+	    channel.sendMessage(String.format("%s has changed topic to: `%s`", event.getUser().getHostmask(), event.getTopic())).queue();
     }
 
     @Override

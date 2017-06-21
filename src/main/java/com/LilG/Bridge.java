@@ -27,6 +27,14 @@ import java.util.List;
 public class Bridge {
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Bridge.class);
 
+	public static TextChannel getDiscordChannel(byte configID, MessageEvent event) {
+		return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
+	}
+
+	public static Channel getIRCChannel(byte configID, GuildMessageReceivedEvent event) {
+		return Main.config[configID].channelMapObj.get(event.getChannel());
+	}
+
 	public static void handleCommand(String command, String[] args, Object eventObj, byte configID, boolean IRC) { // if IRC is true, then command called from IRC
 		switch (command.toLowerCase()) {
 			case "whois": {
@@ -34,7 +42,7 @@ public class Bridge {
 					String name = argJoiner(args, 0);
 					if (IRC) {
 						MessageEvent event = (MessageEvent) eventObj;
-						List<Member> members = Main.config[configID].ircListener.getDiscordChannel(event).getGuild().getMembersByEffectiveName(name, true);
+						List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
 						if (!members.isEmpty()) {
 							String nickname, username, ID, status, avatar, game, joinDate, registerDate, roles, permissions;
 							boolean streaming;
@@ -102,15 +110,15 @@ public class Bridge {
 					} else {
 						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
 						String nick, username, hostname;
-						String hostmask, realname, awayMsg, server;
+						String hostmask, realName, awayMsg, server;
 						boolean away;
-						for (User user : Main.config[configID].discordListener.getIRCChannel(event).getUsers()) {
+						for (User user : getIRCChannel(configID, event).getUsers()) {
 							nick = user.getNick();
 							username = user.getLogin();
 							hostname = user.getHostname();
 							if (!(LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)))
 								continue;
-							realname = user.getRealName();
+							realName = user.getRealName();
 							hostmask = user.getHostmask();
 							away = user.isAway();
 							awayMsg = user.getAwayMessage();
@@ -136,7 +144,7 @@ public class Bridge {
 											"%s" +
 											"%1$s's channels: %s\n" +
 											"%1$s's server: %s\n" +
-											"```", nick, hostmask, realname, away ? nick + " Is away: " + awayMsg : "", channelsBuilder.toString(), server
+											"```", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder.toString(), server
 							), IRC);
 							break;
 						}
@@ -151,7 +159,7 @@ public class Bridge {
 					String name = argJoiner(args, 0);
 					if (IRC) {
 						MessageEvent event = (MessageEvent) eventObj;
-						List<Member> members = Main.config[configID].ircListener.getDiscordChannel(event).getGuild().getMembersByEffectiveName(name, true);
+						List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
 						if (!members.isEmpty()) {
 							String nickname;
 							Member member = members.get(0);
@@ -167,7 +175,7 @@ public class Bridge {
 						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
 						String nick, username, hostname;
 						User user = null;
-						for (User curUser : Main.config[configID].discordListener.getIRCChannel(event).getUsers()) {
+						for (User curUser : getIRCChannel(configID, event).getUsers()) {
 							nick = curUser.getNick();
 							username = curUser.getLogin();
 							hostname = curUser.getHostname();
@@ -226,7 +234,7 @@ public class Bridge {
 		} else {
 			GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
 			if (highlight) {
-				event.getChannel().sendMessage("%s: %s", event.getMember().getAsMention(), message).complete();
+				event.getChannel().sendMessage(String.format("%s: %s", event.getMember().getAsMention(), message)).complete();
 			} else {
 				event.getChannel().sendMessage(message).complete();
 			}
@@ -237,13 +245,13 @@ public class Bridge {
 		if (args.length - 1 == argToStartFrom) {
 			return args[argToStartFrom];
 		}
-		String strToReturn = "";
+		StringBuilder strToReturn = new StringBuilder();
 		for (int length = args.length; length > argToStartFrom; argToStartFrom++) {
-			strToReturn += args[argToStartFrom] + " ";
+			strToReturn.append(args[argToStartFrom]).append(" ");
 		}
 		LOGGER.debug("Argument joined to: " + strToReturn);
-		if (strToReturn.isEmpty()) {
-			return strToReturn;
+		if (strToReturn.length() == 0) {
+			return strToReturn.toString();
 		} else {
 			return strToReturn.substring(0, strToReturn.length() - 1);
 		}
@@ -265,7 +273,7 @@ public class Bridge {
 		return UserLevel.values()[ret - 1];
 	}
 
-	public static String formatString(TextChannel channel, String strToFormat) {
+	static String formatString(TextChannel channel, String strToFormat) {
 		final char underline = '\u001F';
 		final char italics = '\u001D';
 		final char bold = '\u0002';
@@ -312,7 +320,7 @@ public class Bridge {
 		return strToFormat;
 	}
 
-	public static String formatString(String message) {
+	static String formatString(String message) {
 		final char underline = '\u001F';
 		final char italics = '\u001D';
 		final char bold = '\u0002';

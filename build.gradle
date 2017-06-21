@@ -19,7 +19,9 @@ dependencies {
 
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.0.13'
 
-    compile 'java-oo:javac8-oo-plugin:0.5'
+    compile files('javac8-oo-plugin-0.5.jar')
 
-    compile fileTree(dir: 'C#')
+    //compile 'java-oo:javac8-oo-plugin:0.5'
+
+    //compile fileTree(dir: 'C#')
 }

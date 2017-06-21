@@ -24,6 +24,7 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
  */
 public class DiscordListener extends ListenerAdapter {
 	private final static char colorCode = '\u0003';
+	private final static char zeroWidthSpace = '\u200B';
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
 	private final byte configID;
 	public volatile boolean ready;
@@ -32,20 +33,8 @@ public class DiscordListener extends ListenerAdapter {
 		this.configID = configID;
 	}
 
-	public boolean handleCommand(GuildMessageReceivedEvent event) {
-		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
-		if (message == null) {
-			return false;
-		}
-		if (message[0].startsWith(event.getGuild().getSelfMember().getEffectiveName()) ||
-				message[0].startsWith(event.getGuild().getSelfMember().getAsMention())
-				) {
-			if (getIRCChannel(event) != null) {
-				Bridge.handleCommand(message, event, configID, false);
-				return true;
-			}
-		}
-		return false;
+	private static String formatName(String name) {
+		return String.valueOf(name.charAt(0)) + zeroWidthSpace + name.substring(1);
 	}
 
 	@Override
@@ -58,9 +47,25 @@ public class DiscordListener extends ListenerAdapter {
 		return Main.config[configID].channelMapObj.get(event.getChannel());
 	}
 
-    public Channel getIRCChannel(GenericTextChannelEvent event) {
-        return Main.config[configID].channelMapObj.get(event.getChannel());
-    }
+	public Channel getIRCChannel(GenericTextChannelEvent event) {
+		return Main.config[configID].channelMapObj.get(event.getChannel());
+	}
+
+	public boolean handleCommand(GuildMessageReceivedEvent event) {
+		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
+		if (message == null || message.length == 0) {
+			return false;
+		}
+		if (message[0].startsWith(event.getGuild().getSelfMember().getEffectiveName()) ||
+				message[0].startsWith(event.getGuild().getSelfMember().getAsMention())
+				) {
+			if (getIRCChannel(event) != null) {
+				Bridge.handleCommand(message, event, configID, false);
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
 		try {
@@ -102,7 +107,7 @@ public class DiscordListener extends ListenerAdapter {
 					channel.send().message(
 							String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
 									color,
-									event.getMember().getEffectiveName(),
+									formatName(event.getMember().getEffectiveName()),
 									colorCode
 							)
 					);
@@ -113,7 +118,7 @@ public class DiscordListener extends ListenerAdapter {
 					channel.send().message(
 							String.format("<%s%s%c> %s",
 									color,
-									event.getMember().getEffectiveName(),
+									formatName(event.getMember().getEffectiveName()),
 									colorCode,
 									formatString(event.getMessage().getContent())
 							)
@@ -124,7 +129,7 @@ public class DiscordListener extends ListenerAdapter {
 			if ((attachments = event.getMessage().getAttachments()).size() != 0) {
 				StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
 						color,
-						event.getMember().getEffectiveName(),
+						formatName(event.getMember().getEffectiveName()),
 						colorCode)
 				);
 				for (Message.Attachment attachment : attachments) {
