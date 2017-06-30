@@ -17,7 +17,9 @@ import org.pircbotx.UserLevel;
 import org.pircbotx.hooks.events.MessageEvent;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 
@@ -304,11 +306,18 @@ public class Bridge {
 			String strLower = strToFormat.toLowerCase();
 			for (Member member : channel.getMembers()) {
 				String memberName = member.getEffectiveName().toLowerCase();
-				while (strLower.contains("@" + memberName)) {
+				String userName = member.getUser().getName().toLowerCase();
+				boolean usesNick;
+				while (strLower.contains("@" + memberName) || strLower.contains("@" + userName)) {
+					usesNick = true;
 					int index = strLower.indexOf(memberName);
+					if(index == -1){
+						index = strLower.indexOf(userName);
+						usesNick = false;
+					}
 					strToFormat = strToFormat.substring(0, index - 1) +
 							member.getAsMention() +
-							strToFormat.substring(index + memberName.length());
+							strToFormat.substring(index + (usesNick ? memberName : userName).length());
 					strLower = strToFormat.toLowerCase();
 				}
 			}
@@ -329,11 +338,10 @@ public class Bridge {
 		for (int i = 0, partsLength = parts.length; i < partsLength; i++) {
 			String item = parts[i];
 			try {
-				new URL(item);
+				new URL(item).toURI();
 				// If possible then replace with anchor...
 				message = message.replace(parts[i], "%" + (i + 1) + "$s");
-			} catch (MalformedURLException ignored) {
-			}
+			} catch (IOException|URISyntaxException ignored) {}
 		}
 
 		int underlineCount = StringUtils.countMatches(message, "__");
