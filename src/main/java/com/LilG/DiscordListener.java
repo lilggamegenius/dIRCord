@@ -40,20 +40,20 @@ public class DiscordListener extends ListenerAdapter {
 	@Override
 	public void onReady(ReadyEvent event) {
 		ready = true;
-		Main.config[configID].ircListener.fillChannelMap();
+		config().ircListener.fillChannelMap();
 	}
 
 	public Channel getIRCChannel(GuildMessageReceivedEvent event) {
-		return Main.config[configID].channelMapObj.get(event.getChannel());
+		return config().channelMapObj.get(event.getChannel());
 	}
 
 	public Channel getIRCChannel(GenericTextChannelEvent event) {
-		return Main.config[configID].channelMapObj.get(event.getChannel());
+		return config().channelMapObj.get(event.getChannel());
 	}
 
 	public boolean handleCommand(GuildMessageReceivedEvent event) {
 		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
-		if (message == null || message.length == 0) {
+		if (message.length == 0 || message[0].isEmpty()) {
 			return false;
 		}
 		if (message[0].startsWith(event.getGuild().getSelfMember().getEffectiveName()) ||
@@ -90,7 +90,7 @@ public class DiscordListener extends ListenerAdapter {
 				return;
 			}
 			String color = "";
-			if (Main.config[configID].ircNickColor) {
+			if (config().ircNickColor) {
 				int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
 				if (ircColorCode < 0) {
 					ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
@@ -103,7 +103,7 @@ public class DiscordListener extends ListenerAdapter {
 				return;
 			}
 			if (message.length() != 0) {
-				if (startsWithAny(message, Main.config[configID].commandCharacters.toArray(new String[]{}))) {
+				if (startsWithAny(message, config().commandCharacters.toArray(new String[]{}))) {
 					channel.send().message(
 							String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
 									color,
@@ -137,6 +137,7 @@ public class DiscordListener extends ListenerAdapter {
 				}
 				channel.send().message(embedMessage.toString());
 			}
+			Main.LastUserToSpeak.put(event.getChannel(), event.getMember());
 		} catch (Exception e) {
 			LOGGER.error("Error in DiscordListener\n", e);
 		}
@@ -148,11 +149,11 @@ public class DiscordListener extends ListenerAdapter {
             return;
         }
         Member member = event.getGuild().getMember(event.getUser());
-        for (String discordChannels : Main.config[configID].channelMapping.keySet()) {
+        for (String discordChannels : config().channelMapping.keySet()) {
             for(TextChannel textChannel : event.getGuild().getTextChannels()) {
                 if (discordChannels.substring(1, discordChannels.length()).equals(textChannel.getName())) {
                     String color = "";
-                    if (Main.config[configID].ircNickColor) {
+                    if (config().ircNickColor) {
                         int ircColorCode = ColorMap.valueOf(member.getColor());
                         if (ircColorCode < 0) {
                             ircColorCode = LilGUtil.hash(member.getEffectiveName(), 12) + 2;
@@ -161,7 +162,7 @@ public class DiscordListener extends ListenerAdapter {
                     }
 
                     Main.pircBotX.send()
-                            .message(Main.config[configID]
+                            .message(config()
                                             .channelMapping
                                             .get(discordChannels),
                                     String.format("\\*%s%s%c\\* %s",
@@ -177,14 +178,14 @@ public class DiscordListener extends ListenerAdapter {
         }
     }*/
 
-    @Override
-    public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
-        Channel channel = getIRCChannel(event);
-        if (channel == null) {
-            return;
-        }
-        channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
-    }
+	@Override
+	public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
+		Channel channel = getIRCChannel(event);
+		if (channel == null) {
+			return;
+		}
+		channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
+	}
 
 	public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
 
@@ -192,7 +193,7 @@ public class DiscordListener extends ListenerAdapter {
 			return;
 		}
 		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
-			Channel channel = Main.config[configID].channelMapObj.get(textChannel);
+			Channel channel = config().channelMapObj.get(textChannel);
 			if (channel == null) {
 				continue;
 			}
@@ -207,7 +208,7 @@ public class DiscordListener extends ListenerAdapter {
 			} else if (newNick == null) {
 				newNick = username;
 			}
-			if (Main.config[configID].ircNickColor) {
+			if (config().ircNickColor) {
 				boolean usingDiscordColor = true;
 				int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
 				if (ircColorCode < 0) {
@@ -232,6 +233,10 @@ public class DiscordListener extends ListenerAdapter {
 			)
 			;
 		}
+	}
+
+	public Configuration config() {
+		return Main.config[configID];
 	}
 
 	enum ColorMap {

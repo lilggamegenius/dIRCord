@@ -15,29 +15,29 @@ import java.util.Map;
  */
 
 public class Configuration {
-    public String nickname = "dIRCord<Missing nick in config>";
-    public String userName = "dIRCord<Missing username in config>";
-    public String realName = "dIRCord - Discord IRC Bridge";
-    public String server = "<Missing server in config>";
-    public int port = 6667;
-    public boolean SSL = false;
-    public String nickservPassword = "<Missing nickserv password in config>";
-    public boolean autoSplitMessage = false;
-    public List<String> autoSendCommands = new ArrayList<>();
-    public boolean floodProtection = true;
-    public int floodProtectionDelay = 1000;
-    public boolean ircNickColor = false;
-    public String discordToken = "<Missing discord token in config>";
+	public String nickname = "dIRCord<Missing nick in config>";
+	public String userName = "dIRCord<Missing username in config>";
+	public String realName = "dIRCord - Discord IRC Bridge";
+	public String server = "<Missing server in config>";
+	public int port = 6667;
+	public boolean SSL = false;
+	public String nickservPassword = "<Missing nickserv password in config>";
+	public boolean autoSplitMessage = false;
+	public List<String> autoSendCommands = new ArrayList<>();
+	public boolean floodProtection = true;
+	public int floodProtectionDelay = 1000;
+	public boolean ircNickColor = false;
+	public String discordToken = "<Missing discord token in config>";
 
-    public Map<String, String> channelMapping = HashBiMap.create();
+	public Map<String, String> channelMapping = HashBiMap.create();
 
-    public List<String> commandCharacters = new ArrayList<>();
+	public List<String> commandCharacters = new ArrayList<>();
 
-    public int minutesOfInactivityToUpdate = 10;
+	public int minutesOfInactivityToUpdate = 10;
 
-    public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
-    public transient IrcListener ircListener;
-    public transient DiscordListener discordListener;
-    public transient PircBotX pircBotX;
-    public transient JDA jda;
+	public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
+	public transient IrcListener ircListener;
+	public transient DiscordListener discordListener;
+	public transient PircBotX pircBotX;
+	public transient JDA jda;
 }
