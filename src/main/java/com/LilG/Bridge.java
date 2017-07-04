@@ -18,7 +18,6 @@ import org.pircbotx.hooks.events.MessageEvent;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
@@ -28,6 +27,7 @@ import java.util.List;
  */
 public class Bridge {
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Bridge.class);
+	private static final String escapePrefix = "@!";
 
 	public static TextChannel getDiscordChannel(byte configID, MessageEvent event) {
 		return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
@@ -243,6 +243,10 @@ public class Bridge {
 		}
 	}
 
+	private static String argJoiner(String[] args) throws ArrayIndexOutOfBoundsException {
+		return argJoiner(args, 0);
+	}
+
 	private static String argJoiner(String[] args, int argToStartFrom) throws ArrayIndexOutOfBoundsException {
 		if (args.length - 1 == argToStartFrom) {
 			return args[argToStartFrom];
@@ -304,14 +308,26 @@ public class Bridge {
 		if (strToFormat.contains("@")) {
 			strToFormat = strToFormat.replace("@everyone", "`@everyone`");
 			String strLower = strToFormat.toLowerCase();
+			if (strLower.contains(escapePrefix)) {
+				String[] message = LilGUtil.splitMessage(strLower, false);
+				for (int i = 0; i < message.length; i++) {
+					if (!message[i].startsWith(escapePrefix)) continue;
+					message[i] = message[i].substring(escapePrefix.length());
+					switch (message[i]) {
+						case "last":
+							message[i] = Main.LastUserToSpeak.get(channel).getAsMention();
+					}
+				}
+				strLower = argJoiner(message);
+			}
+			boolean usesNick;
 			for (Member member : channel.getMembers()) {
 				String memberName = member.getEffectiveName().toLowerCase();
 				String userName = member.getUser().getName().toLowerCase();
-				boolean usesNick;
 				while (strLower.contains("@" + memberName) || strLower.contains("@" + userName)) {
 					usesNick = true;
 					int index = strLower.indexOf(memberName);
-					if(index == -1){
+					if (index == -1) {
 						index = strLower.indexOf(userName);
 						usesNick = false;
 					}
@@ -341,7 +357,8 @@ public class Bridge {
 				new URL(item).toURI();
 				// If possible then replace with anchor...
 				message = message.replace(parts[i], "%" + (i + 1) + "$s");
-			} catch (IOException|URISyntaxException ignored) {}
+			} catch (IOException | URISyntaxException ignored) {
+			}
 		}
 
 		int underlineCount = StringUtils.countMatches(message, "__");
