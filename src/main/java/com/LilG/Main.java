@@ -96,7 +96,6 @@ public class Main {
 				config.discordListener = new DiscordListener(i);
 				ircConfig = configBuilder.addListener(config.ircListener).buildForServer(config.server, config.port);
 				manager.addBot(ircConfig);
-				manager.start();
 				String token = config.discordToken;
 				LOGGER.trace("Calling JDA Builder with token: " + token);
 				config.jda = new JDABuilder(AccountType.BOT)
@@ -107,6 +106,7 @@ public class Main {
 						.buildBlocking();
 				LOGGER.trace("JDA built\n" + config.jda);
 			}
+			manager.start();
 		} catch (JsonSyntaxException e) {
 			try (FileWriter emptyFile = new FileWriter(new File("EmptyConfig.json"))) {
 				LOGGER.error("Error reading config json", e);

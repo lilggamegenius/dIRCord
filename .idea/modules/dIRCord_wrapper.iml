@@ -5,6 +5,7 @@
     <content url="file://$MODULE_DIR$/../../dIRCord_wrapper">
       <excludeFolder url="file://$MODULE_DIR$/../../dIRCord_wrapper/.gradle" />
       <excludeFolder url="file://$MODULE_DIR$/../../dIRCord_wrapper/build" />
+      <excludeFolder url="file://$MODULE_DIR$/../../dIRCord_wrapper/out" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

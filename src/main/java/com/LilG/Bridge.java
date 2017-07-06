@@ -39,6 +39,27 @@ public class Bridge {
 
 	public static void handleCommand(String command, String[] args, Object eventObj, byte configID, boolean IRC) { // if IRC is true, then command called from IRC
 		switch (command.toLowerCase()) {
+			case "help": {
+				if (args.length > 0) {
+					switch (args[0].toLowerCase()) {
+						case "help": {
+							sendMessage(eventObj, ">_>", IRC);
+						}
+						break;
+						case "whois": {
+							sendMessage(eventObj, "This command tells you info about a user from the other side of the bridge. The only argument is the name of the user", IRC);
+						}
+						break;
+						case "ison": {
+							sendMessage(eventObj, "This command tells you if a user on the other side of the bridge is online. The only argument is the name of the user", IRC);
+						}
+						break;
+					}
+				} else {
+					sendMessage(eventObj, "Run of the mill help command, for help with a command, just use the command name as the argument. List of commands [whois, ison]", IRC);
+				}
+			}
+			break;
 			case "whois": {
 				if (args.length > 0) {
 					String name = argJoiner(args, 0);
@@ -307,9 +328,8 @@ public class Bridge {
 		}
 		if (strToFormat.contains("@")) {
 			strToFormat = strToFormat.replace("@everyone", "`@everyone`");
-			String strLower = strToFormat.toLowerCase();
-			if (strLower.contains(escapePrefix)) {
-				String[] message = LilGUtil.splitMessage(strLower, false);
+			if (strToFormat.contains(escapePrefix)) {
+				String[] message = LilGUtil.splitMessage(strToFormat, false);
 				for (int i = 0; i < message.length; i++) {
 					if (!message[i].startsWith(escapePrefix)) continue;
 					message[i] = message[i].substring(escapePrefix.length());
@@ -318,8 +338,9 @@ public class Bridge {
 							message[i] = Main.LastUserToSpeak.get(channel).getAsMention();
 					}
 				}
-				strLower = argJoiner(message);
+				strToFormat = argJoiner(message);
 			}
+			String strLower = strToFormat.toLowerCase();
 			boolean usesNick;
 			for (Member member : channel.getMembers()) {
 				String memberName = member.getEffectiveName().toLowerCase();
