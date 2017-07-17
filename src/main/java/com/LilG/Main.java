@@ -26,14 +26,32 @@ import java.util.Map;
  * Created by lil-g on 12/12/16.
  */
 public class Main {
-	public final static String kvircFlags = "\u00034\u000F";
-	public final static MultiBotManager manager = new MultiBotManager();
+	final static String errorMsg = ". If you see this a lot, add a issue on the Issue tracker https://github.com/lilggamegenuis/dIRCord/issues";
+	private final static String kvircFlags = "\u00034\u000F";
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Main.class);
 	private final static int attempts = 10;
 	private final static int connectDelay = 15 * 1000;
-	public static long lastActivity = System.currentTimeMillis(); // activity as in people talking
-	public static Configuration[] config;
-	public static Map<TextChannel, Member> LastUserToSpeak = new HashMap<>();
+	private final static MultiBotManager manager = new MultiBotManager();
+	private final static File thisJar;
+	private final static long lastModified;
+	static long lastActivity = System.currentTimeMillis(); // activity as in people talking
+	static Configuration[] config;
+	static Map<TextChannel, Member> LastUserToSpeak = new HashMap<>();
+
+	static {
+		File thisJar_;
+		long lastModified_;
+		try {
+			thisJar_ = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+			lastModified_ = thisJar_.lastModified();
+		} catch (URISyntaxException e) {
+			thisJar_ = new File(".");
+			lastModified_ = System.currentTimeMillis();
+			e.printStackTrace();
+		}
+		thisJar = thisJar_;
+		lastModified = lastModified_;
+	}
 
 	public static void main(String args[]) throws LoginException, InterruptedException, RateLimitedException {
 		LOGGER.setLevel(Level.ALL);
@@ -120,13 +138,12 @@ public class Main {
 
 	}
 
-	public static void checkForNewBuild() throws URISyntaxException, IOException {
+	private static void checkForNewBuild() throws URISyntaxException, IOException {
 		if (Thread.holdsLock(kvircFlags)) return;
 		synchronized (kvircFlags) {
-			File thisJar = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 			File newJar = new File(thisJar.getParent(), thisJar.getName() + ".new");
 			LOGGER.trace("This jar: " + thisJar.getName() + " New jar: " + newJar.getName());
-			if (!newJar.exists()) {
+			if (!newJar.exists() || thisJar.lastModified() == lastModified) {
 				LOGGER.trace("no new build found");
 				return;
 			}

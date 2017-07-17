@@ -25,19 +25,19 @@ import java.util.List;
 /**
  * Created by ggonz on 4/4/2017.
  */
-public class Bridge {
+class Bridge {
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Bridge.class);
 	private static final String escapePrefix = "@!";
 
-	public static TextChannel getDiscordChannel(byte configID, MessageEvent event) {
+	private static TextChannel getDiscordChannel(byte configID, MessageEvent event) {
 		return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
 	}
 
-	public static Channel getIRCChannel(byte configID, GuildMessageReceivedEvent event) {
+	private static Channel getIRCChannel(byte configID, GuildMessageReceivedEvent event) {
 		return Main.config[configID].channelMapObj.get(event.getChannel());
 	}
 
-	public static void handleCommand(String command, String[] args, Object eventObj, byte configID, boolean IRC) { // if IRC is true, then command called from IRC
+	private static void handleCommand(String command, String[] args, Object eventObj, byte configID, boolean IRC) { // if IRC is true, then command called from IRC
 		switch (command.toLowerCase()) {
 			case "help": {
 				if (args.length > 0) {
@@ -228,7 +228,7 @@ public class Bridge {
 		}
 	}
 
-	public static void handleCommand(String[] message, Object event, byte configID, boolean IRC) {
+	static void handleCommand(String[] message, Object event, byte configID, boolean IRC) {
 		String command, args[] = {};
 		command = message[1];
 		if (message.length > 2) {
@@ -305,9 +305,17 @@ public class Bridge {
 		final char italics = '\u001D';
 		final char bold = '\u0002';
 		final char color = '\u0003';
+		final char reverse = '\u0016';
+		int reverseCount = StringUtils.countMatches(strToFormat, reverse);
 		int underlineCount = StringUtils.countMatches(strToFormat, underline);
 		int italicsCount = StringUtils.countMatches(strToFormat, italics);
 		int boldCount = StringUtils.countMatches(strToFormat, bold);
+		if (reverseCount != 0) {
+			strToFormat = strToFormat.replace(reverse, '`');
+			if (reverseCount % 2 != 0) {
+				strToFormat += '`';
+			}
+		}
 		if (underlineCount != 0) {
 			strToFormat = strToFormat.replace(underline + "", "__");
 			if (underlineCount % 2 != 0) {
@@ -315,7 +323,7 @@ public class Bridge {
 			}
 		}
 		if (italicsCount != 0) {
-			strToFormat = strToFormat.replace(italics + "", "_");
+			strToFormat = strToFormat.replace(italics, '_');
 			if (italicsCount % 2 != 0) {
 				strToFormat += "_";
 			}
@@ -370,18 +378,49 @@ public class Bridge {
 		final char underline = '\u001F';
 		final char italics = '\u001D';
 		final char bold = '\u0002';
+		final char reverse = '\u0016';
 		// find links
 		String[] parts = message.split("\\s+");
-		for (int i = 0, partsLength = parts.length; i < partsLength; i++) {
+		int i = 0;
+		boolean inBlockComment = false;
+		int blockCount = StringUtils.countMatches(message, "```");
+		for (int partsLength = parts.length; i < partsLength; i++) {
 			String item = parts[i];
 			try {
 				new URL(item).toURI();
 				// If possible then replace with anchor...
 				message = message.replace(parts[i], "%" + (i + 1) + "$s");
+				continue;
 			} catch (IOException | URISyntaxException ignored) {
+			}
+			if (parts[i].startsWith("```") && blockCount > 1) {
+				inBlockComment = true;
+				message = message.replace(parts[i], "%" + (i + 1) + "$s");
+				blockCount--;
+				if (parts[i].endsWith("```")) {
+					inBlockComment = false;
+					blockCount--;
+				}
+			}
+			if (inBlockComment) {
+				if (parts[i].endsWith("```")) {
+					inBlockComment = false;
+				}
+				message = message.replace(parts[i], "%" + (i + 1) + "$s");
+				blockCount--;
 			}
 		}
 
+		int inlineCodeCount = StringUtils.countMatches(message, "`");
+		if (inlineCodeCount > 1) {
+			if (inlineCodeCount % 2 != 0) {
+				for (int count = 0; count < inlineCodeCount; count++) {
+					message = message.replace('`', reverse);
+				}
+			} else {
+				message = message.replace('`', reverse);
+			}
+		}
 		int underlineCount = StringUtils.countMatches(message, "__");
 		if (underlineCount > 1) {
 			if (underlineCount % 2 != 0) {
@@ -406,20 +445,20 @@ public class Bridge {
 		if (italicsCount > 1) {
 			if (italicsCount % 2 != 0) {
 				for (int count = 0; count < italicsCount; count++) {
-					message = message.replace("_", italics + "");
+					message = message.replace('_', italics);
 				}
 			} else {
-				message = message.replace("_", italics + "");
+				message = message.replace('_', italics);
 			}
 		}
 		italicsCount = StringUtils.countMatches(message, "*");
 		if (italicsCount > 1) {
 			if (italicsCount % 2 != 0) {
 				for (int count = 0; count < italicsCount; count++) {
-					message = message.replace("*", italics + "");
+					message = message.replace('*', italics);
 				}
 			} else {
-				message = message.replace("*", italics + "");
+				message = message.replace('*', italics);
 			}
 		}
 		message = message

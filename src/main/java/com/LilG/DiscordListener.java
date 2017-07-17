@@ -2,6 +2,7 @@ package com.LilG;
 
 import ch.qos.logback.classic.Logger;
 import com.LilG.utils.LilGUtil;
+import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.ReadyEvent;
@@ -17,6 +18,7 @@ import java.awt.*;
 import java.util.List;
 
 import static com.LilG.Bridge.formatString;
+import static com.LilG.Main.errorMsg;
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
 /**
@@ -33,8 +35,42 @@ public class DiscordListener extends ListenerAdapter {
 		this.configID = configID;
 	}
 
-	private static String formatName(String name) {
-		return String.valueOf(name.charAt(0)) + zeroWidthSpace + name.substring(1);
+	private String formatMember(Member user) {
+		return formatMember(user, FormatAs.effectiveName);
+	}
+
+	private String formatMember(Member user, FormatAs format) {
+		switch (format) {
+			case effectiveName:
+				return formatMember(user, (String) null);
+			case NickName:
+				return formatMember(user, user.getNickname());
+			case Username:
+				return formatMember(user, user.getUser().getName());
+			case ID:
+				return formatMember(user, user.getUser().getId()); // ????
+		}
+		return "";
+	}
+
+	private String formatMember(Member user, String override) {
+		if (override == null) {
+			override = user.getEffectiveName();
+		}
+		String color = "";
+		if (config().ircNickColor) {
+			int ircColorCode = ColorMap.valueOf(user.getColor());
+			if (ircColorCode < 0) {
+				ircColorCode = LilGUtil.hash(user.getEffectiveName(), 12) + 2;
+			}
+			color = colorCode + String.format("%02d", ircColorCode);
+		}
+		String nameWithSpace = String.valueOf(override.charAt(0)) + zeroWidthSpace + override.substring(1);
+		return String.format("%s%s%c", color, nameWithSpace, colorCode);
+	}
+
+	private Channel getIRCChannel(GuildMessageReceivedEvent event) {
+		return config().channelMapObj.get(event.getChannel());
 	}
 
 	@Override
@@ -43,15 +79,11 @@ public class DiscordListener extends ListenerAdapter {
 		config().ircListener.fillChannelMap();
 	}
 
-	public Channel getIRCChannel(GuildMessageReceivedEvent event) {
+	private Channel getIRCChannel(GenericTextChannelEvent event) {
 		return config().channelMapObj.get(event.getChannel());
 	}
 
-	public Channel getIRCChannel(GenericTextChannelEvent event) {
-		return config().channelMapObj.get(event.getChannel());
-	}
-
-	public boolean handleCommand(GuildMessageReceivedEvent event) {
+	private boolean handleCommand(GuildMessageReceivedEvent event) {
 		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
 		if (message.length == 0 || message[0].isEmpty()) {
 			return false;
@@ -81,21 +113,13 @@ public class DiscordListener extends ListenerAdapter {
 				discordUsername = discordNick;
 				discordHostmask = event.getAuthor().getId();
 			} catch (Exception e) {
-				LOGGER.error("Error receiving message", e);
+				LOGGER.error("Error receiving message" + errorMsg, e);
 			}
 			LOGGER.info(String.format("#%s: <%s!%s@%s> %s", event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getRawContent()));
 
 			if (event.getMember().equals(event.getGuild().getSelfMember()) ||
 					handleCommand(event)) {
 				return;
-			}
-			String color = "";
-			if (config().ircNickColor) {
-				int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-				if (ircColorCode < 0) {
-					ircColorCode = LilGUtil.hash(event.getMember().getEffectiveName(), 12) + 2;
-				}
-				color = colorCode + String.format("%02d", ircColorCode);
 			}
 			String message = event.getMessage().getContent();
 			Channel channel = getIRCChannel(event);
@@ -105,10 +129,8 @@ public class DiscordListener extends ListenerAdapter {
 			if (message.length() != 0) {
 				if (startsWithAny(message, config().commandCharacters.toArray(new String[]{}))) {
 					channel.send().message(
-							String.format("\u001DCommand Sent by\u001D \u0002%s%s%c\u0002",
-									color,
-									formatName(event.getMember().getEffectiveName()),
-									colorCode
+							String.format("\u001DCommand Sent by\u001D \u0002%s\u0002",
+									formatMember(event.getMember())
 							)
 					);
 					channel.send().message(
@@ -116,10 +138,8 @@ public class DiscordListener extends ListenerAdapter {
 					);
 				} else {
 					channel.send().message(
-							String.format("<%s%s%c> %s",
-									color,
-									formatName(event.getMember().getEffectiveName()),
-									colorCode,
+							String.format("<%s> %s",
+									formatMember(event.getMember()),
 									formatString(event.getMessage().getContent())
 							)
 					);
@@ -127,10 +147,8 @@ public class DiscordListener extends ListenerAdapter {
 			}
 			List<Message.Attachment> attachments;
 			if ((attachments = event.getMessage().getAttachments()).size() != 0) {
-				StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s%s%c>:",
-						color,
-						formatName(event.getMember().getEffectiveName()),
-						colorCode)
+				StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s>:",
+						formatMember(event.getMember()))
 				);
 				for (Message.Attachment attachment : attachments) {
 					embedMessage.append(" ").append(attachment.getUrl());
@@ -139,9 +157,19 @@ public class DiscordListener extends ListenerAdapter {
 			}
 			Main.LastUserToSpeak.put(event.getChannel(), event.getMember());
 		} catch (Exception e) {
-			LOGGER.error("Error in DiscordListener\n", e);
+			LOGGER.error("Error in DiscordListener" + errorMsg, e);
 		}
 		Main.lastActivity = System.currentTimeMillis();
+	}
+
+	@Override
+	public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
+		Channel channel = getIRCChannel(event);
+		if (channel == null) {
+			return;
+		}
+		// Afaik Discord doesn't have info for who changed a topic
+		channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
 	}
 
     /*public void onUserOnlineStatusUpdate(UserOnlineStatusUpdateEvent event) {
@@ -178,18 +206,9 @@ public class DiscordListener extends ListenerAdapter {
         }
     }*/
 
-	@Override
-	public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
-		Channel channel = getIRCChannel(event);
-		if (channel == null) {
-			return;
-		}
-		channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
-	}
-
 	public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
-
-		if (event.getMember().equals(event.getGuild().getSelfMember())) {
+		Member user = event.getMember();
+		if (user.equals(event.getGuild().getSelfMember())) {
 			return;
 		}
 		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
@@ -197,8 +216,6 @@ public class DiscordListener extends ListenerAdapter {
 			if (channel == null) {
 				continue;
 			}
-			String color = "";
-			String secondColor = "";
 
 			String prevNick = event.getPrevNick();
 			String newNick = event.getNewNick();
@@ -208,35 +225,22 @@ public class DiscordListener extends ListenerAdapter {
 			} else if (newNick == null) {
 				newNick = username;
 			}
-			if (config().ircNickColor) {
-				boolean usingDiscordColor = true;
-				int ircColorCode = ColorMap.valueOf(event.getMember().getColor());
-				if (ircColorCode < 0) {
-					ircColorCode = LilGUtil.hash(prevNick, 12) + 2;
-					usingDiscordColor = false;
-				}
-				color = colorCode + String.format("%02d", ircColorCode);
-				if (!usingDiscordColor) {
-					secondColor = colorCode + String.format("%02d", LilGUtil.hash(newNick, 12) + 2);
-				}
-			}
-
-			channel.send().message(String.format("\u001D*%s%s%c\u001D* %s%s%s%c",
-					color,
-					prevNick,
-					colorCode,
+			channel.send().message(String.format("\u001D*%s\u001D* %s%s",
+					formatMember(user, prevNick),
 					"Has changed nick to ",
-					secondColor,
-					newNick,
-					colorCode
+					formatMember(user, newNick)
 					)
 			)
 			;
 		}
 	}
 
-	public Configuration config() {
+	private Configuration config() {
 		return Main.config[configID];
+	}
+
+	enum FormatAs {
+		effectiveName, NickName, Username, ID
 	}
 
 	enum ColorMap {

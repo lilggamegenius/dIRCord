@@ -17,6 +17,7 @@ import org.pircbotx.hooks.types.GenericChannelEvent;
 import org.slf4j.LoggerFactory;
 
 import static com.LilG.Bridge.formatString;
+import static com.LilG.Main.errorMsg;
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
 /**
@@ -31,7 +32,7 @@ public class IrcListener extends ListenerAdapter {
 		this.configID = configID;
 	}
 
-	public static String getUserSymbol(MessageEvent event) {
+	private static String getUserSymbol(MessageEvent event) {
 		return getUserSymbol(event, event.getChannel(), event.getUser());
 	}
 
@@ -43,7 +44,7 @@ public class IrcListener extends ListenerAdapter {
 		return getUserSymbol(event, channel, event.getUser());
 	}
 
-	public static String getUserSymbol(MessageEvent event, Channel channel, User user) {
+	private static String getUserSymbol(MessageEvent event, Channel channel, User user) {
 		ImmutableSortedSet<UserLevel> userLevels = user.getUserLevels(channel);
 		UserLevel topUserLevel = null;
 		for (UserLevel userLevel : userLevels) {
@@ -76,7 +77,7 @@ public class IrcListener extends ListenerAdapter {
 		return ret;
 	}
 
-	public boolean handleCommand(MessageEvent event) {
+	private boolean handleCommand(MessageEvent event) {
 		String[] message = LilGUtil.splitMessage(event.getMessage());
 		if (message.length > 0) {
 			if (message[0].startsWith(event.getBot().getNick())) {
@@ -111,7 +112,7 @@ public class IrcListener extends ListenerAdapter {
 			TextChannel channel = getDiscordChannel(event);
 			for (int tries = 0; channel == null; tries++) {
 				if (tries > 10) {
-					event.respond("Failed sending message to discord, tell Lil-G about it");
+					event.respond("Failed sending message to discord" + errorMsg);
 					return;
 				}
 				channel = getDiscordChannel(event);
@@ -252,11 +253,11 @@ public class IrcListener extends ListenerAdapter {
 		}
 	}
 
-	public TextChannel getDiscordChannel(GenericChannelEvent event) {
+	private TextChannel getDiscordChannel(GenericChannelEvent event) {
 		return config().channelMapObj.inverse().get(event.getChannel());
 	}
 
-	public void fillChannelMap() {
+	void fillChannelMap() {
 		if (config().pircBotX == null || config().pircBotX.getUserBot().getChannels().size() == 0 || !ready) {
 			return;
 		}
@@ -277,7 +278,7 @@ public class IrcListener extends ListenerAdapter {
 		LOGGER.info("Filled channel map");
 	}
 
-	public Configuration config() {
+	private Configuration config() {
 		return Main.config[configID];
 	}
 }
