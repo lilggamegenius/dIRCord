@@ -1,5 +1,7 @@
-package com.LilG;
+package com.LilG.Config;
 
+import com.LilG.DiscordListener;
+import com.LilG.IrcListener;
 import com.google.common.collect.HashBiMap;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.entities.TextChannel;
@@ -7,6 +9,7 @@ import org.pircbotx.Channel;
 import org.pircbotx.PircBotX;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +34,7 @@ public class Configuration {
 
 	public Map<String, String> channelMapping = HashBiMap.create();
 
-	public List<String> commandCharacters = new ArrayList<>();
+	public ChannelConfigs channelOptions = new ChannelConfigs();
 
 	public int minutesOfInactivityToUpdate = 10;
 
@@ -40,4 +43,14 @@ public class Configuration {
 	public transient DiscordListener discordListener;
 	public transient PircBotX pircBotX;
 	public transient JDA jda;
+
+	public class ChannelConfigs {
+		public final Map<String, DiscordChannelConfiguration> Discord;
+		public final Map<String, IRCChannelConfiguration> IRC;
+
+		public ChannelConfigs() {
+			Discord = new HashMap<>();
+			IRC = new HashMap<>();
+		}
+	}
 }

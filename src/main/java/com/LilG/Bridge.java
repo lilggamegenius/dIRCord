@@ -225,6 +225,21 @@ class Bridge {
 					sendMessage(eventObj, String.format("Topic: %s", event.getChannel().getTopic()), IRC);
 				}
 			}
+			break;
+			case "rehash": {
+				if (IRC) {
+					//"#bridge-test": "#SSRG-Test"
+					MessageEvent event = (MessageEvent) eventObj;
+					if (event.getChannel().getUserLevels(event.getUser()) != null) {
+						Main.rehash();
+					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					if (event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
+						Main.rehash();
+					}
+				}
+			}
 		}
 	}
 

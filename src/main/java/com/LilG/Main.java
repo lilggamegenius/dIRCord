@@ -2,6 +2,7 @@ package com.LilG;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.LilG.Config.Configuration;
 import com.google.common.collect.HashBiMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -19,7 +20,9 @@ import javax.security.auth.login.LoginException;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,6 +37,8 @@ public class Main {
 	private final static MultiBotManager manager = new MultiBotManager();
 	private final static File thisJar;
 	private final static long lastModified;
+	private final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	private static File configFile;
 	static long lastActivity = System.currentTimeMillis(); // activity as in people talking
 	static Configuration[] config;
 	static Map<TextChannel, Member> LastUserToSpeak = new HashMap<>();
@@ -60,7 +65,7 @@ public class Main {
 				LOGGER.trace("Starting updater thread");
 				while (!Thread.currentThread().isInterrupted()) {
 					Thread.sleep(60 * 1000);
-					if (Main.lastActivity + 1000 * 60 * 10 < System.currentTimeMillis()) {
+					if (Main.lastActivity + 1000 * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
 						LOGGER.trace("Checking for new build");
 						Main.checkForNewBuild();
 					}
@@ -76,12 +81,14 @@ public class Main {
 		} else {
 			configFilePath = args[0];
 		}
-
-		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		File configFile = new File(configFilePath);
+		configFile = new File(configFilePath);
 		LOGGER.info("Path = " + configFile.getAbsolutePath());
 		try (Reader reader = new FileReader(configFile)) {
 			config = gson.fromJson(reader, Configuration[].class);
+			if (config.length == 0) {
+				LOGGER.error("Config file is empty");
+				System.exit(-1);
+			}
 			for (byte i = 0; i < config.length; i++) {
 				Configuration config = Main.config[i];
 				config.channelMapping = HashBiMap.create(config.channelMapping);
@@ -153,6 +160,63 @@ public class Main {
 				configuration.jda.shutdown();
 			}
 			System.exit(1); // tell wrapper that new jar was found
+		}
+	}
+
+	public static void rehash() {
+		try (Reader reader = new FileReader(configFile)) {
+			Configuration[] configs = gson.fromJson(reader, Configuration[].class);
+			for (byte i = 0; i < configs.length; i++) {
+				Configuration config = configs[i];
+				config.channelMapObj = Main.config[i].channelMapObj;
+				config.ircListener = Main.config[i].ircListener;
+				config.discordListener = Main.config[i].discordListener;
+				config.pircBotX = Main.config[i].pircBotX;
+				config.jda = Main.config[i].jda;
+				if (!config.discordToken.equals(Main.config[i].discordToken))
+					LOGGER.info("Discord token change will take affect on next restart");
+				if (!config.server.equals(Main.config[i].server) ||
+						config.port != Main.config[i].port ||
+						config.SSL != Main.config[i].SSL) {
+					LOGGER.info("IRC server changes will take affect on next restart change will take affect on next restart");
+					continue;
+				}
+				config.channelMapping = HashBiMap.create(config.channelMapping);
+				List<String> channelsToJoin = new ArrayList<>();
+				List<String> channelsToJoinKeys = new ArrayList<>();
+				List<String> channelsToPart = new ArrayList<>(Main.config[i].channelMapping.values());
+				for (String channel : config.channelMapping.values()) {
+					String[] channelValues = channel.split(" ", 1);
+					if (!channelsToPart.remove(channelValues[0])) {
+						channelsToJoin.add(channelValues[0]);
+						if (channelValues.length > 1) {
+							channelsToJoinKeys.add(channelValues[1]);
+						} else {
+							channelsToJoinKeys.add(null);
+						}
+					}
+				}
+				for (String channelToPart : channelsToPart) {
+					Main.config[i].pircBotX.sendRaw().rawLine("PART " + channelToPart + " :Rehashing");
+				}
+				for (int index = 0; index < channelsToJoin.size(); index++) {
+					if (channelsToJoinKeys.get(index) != null) {
+						Main.config[i].pircBotX.send().joinChannel(channelsToJoin.get(index), channelsToJoinKeys.get(index));
+					} else {
+						Main.config[i].pircBotX.send().joinChannel(channelsToJoin.get(index));
+					}
+				}
+			}
+			Main.config = configs;
+		} catch (JsonSyntaxException | IllegalStateException e) {
+			try (FileWriter emptyFile = new FileWriter(new File("EmptyConfig.json"))) {
+				LOGGER.error("Error reading config json", e);
+				emptyFile.write(gson.toJson(new Configuration[]{new Configuration()}));
+			} catch (Exception e2) {
+				LOGGER.error("Error writing empty file", e2);
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error", e);
 		}
 	}
 }

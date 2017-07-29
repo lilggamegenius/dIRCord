@@ -1,6 +1,8 @@
 package com.LilG;
 
 import ch.qos.logback.classic.Logger;
+import com.LilG.Config.Configuration;
+import com.LilG.Config.DiscordChannelConfiguration;
 import com.LilG.utils.LilGUtil;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.util.List;
+import java.util.Map;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
@@ -77,6 +80,12 @@ public class DiscordListener extends ListenerAdapter {
 	public void onReady(ReadyEvent event) {
 		ready = true;
 		config().ircListener.fillChannelMap();
+		Map<String, DiscordChannelConfiguration> configs = config().channelOptions.Discord;
+		for (TextChannel channel : config().channelMapObj.keySet()) {
+			if (!configs.containsKey("#" + channel.getName())) {
+				configs.put("#" + channel.getName(), new DiscordChannelConfiguration());
+			}
+		}
 	}
 
 	private Channel getIRCChannel(GenericTextChannelEvent event) {
@@ -127,7 +136,8 @@ public class DiscordListener extends ListenerAdapter {
 				return;
 			}
 			if (message.length() != 0) {
-				if (startsWithAny(message, config().commandCharacters.toArray(new String[]{}))) {
+				DiscordChannelConfiguration configuration = channelConfig(event);
+				if (configuration != null && startsWithAny(message, configuration.getCommmandCharacters())) {
 					channel.send().message(
 							String.format("\u001DCommand Sent by\u001D \u0002%s\u0002",
 									formatMember(event.getMember())
@@ -237,6 +247,14 @@ public class DiscordListener extends ListenerAdapter {
 
 	private Configuration config() {
 		return Main.config[configID];
+	}
+
+	private DiscordChannelConfiguration channelConfig(GuildMessageReceivedEvent event) {
+		return channelConfig(event.getChannel().getName());
+	}
+
+	private DiscordChannelConfiguration channelConfig(String channel) {
+		return config().channelOptions.Discord.get("#" + channel);
 	}
 
 	enum FormatAs {

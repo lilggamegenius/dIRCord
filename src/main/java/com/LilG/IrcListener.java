@@ -2,6 +2,8 @@ package com.LilG;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.LilG.Config.Configuration;
+import com.LilG.Config.IRCChannelConfiguration;
 import com.LilG.utils.LilGUtil;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableSortedSet;
@@ -117,7 +119,8 @@ public class IrcListener extends ListenerAdapter {
 				}
 				channel = getDiscordChannel(event);
 			}
-			if (startsWithAny(message, config().commandCharacters.toArray(new String[]{}))) {
+			IRCChannelConfiguration configuration = channelConfig(event);
+			if (configuration != null && startsWithAny(message, configuration.getCommmandCharacters())) {
 				TextChannel finalChannel = channel;
 				channel.sendMessage(
 						String.format("_Command Sent by_ `%s%s`",
@@ -157,22 +160,30 @@ public class IrcListener extends ListenerAdapter {
 
 	@Override
 	public void onJoin(JoinEvent event) {
-		getDiscordChannel(event).sendMessage(
-				String.format("**\\*%s\\*** _%s_",
-						formatName(event.getUser()),
-						"Joined"
-				)
-		).queue();
+		IRCChannelConfiguration configuration = channelConfig(event.getChannel().getName());
+		if (configuration == null) {
+			configuration = new IRCChannelConfiguration();
+			config().channelOptions.IRC.put(event.getChannel().getName(), configuration);
+		}
+		if (configuration.joins)
+			getDiscordChannel(event).sendMessage(
+					String.format("**\\*%s\\*** _%s_",
+							formatName(event.getUser()),
+							"Joined"
+					)
+			).queue();
 	}
 
 	@Override
 	public void onPart(PartEvent event) {
-		getDiscordChannel(event).sendMessage(
-				String.format("**\\*%s\\*** _Left_ Reason: %s",
-						formatName(event.getUser()),
-						event.getReason()
-				)
-		).queue();
+		IRCChannelConfiguration configuration = channelConfig(event.getChannel().getName());
+		if (configuration.parts)
+			getDiscordChannel(event).sendMessage(
+					String.format("**\\*%s\\*** _Left_ Reason: %s",
+							formatName(event.getUser()),
+							event.getReason()
+					)
+			).queue();
 	}
 
 	@Override
@@ -209,7 +220,10 @@ public class IrcListener extends ListenerAdapter {
 	@Override
 	public void onQuit(QuitEvent event) {
 		LOGGER.setLevel(Level.ALL);
+
 		for (Channel channel : event.getUser().getChannels()) {
+			IRCChannelConfiguration configuration = channelConfig(channel.getName());
+			if (!configuration.quits) continue;
 			TextChannel textChannel = config().channelMapObj.inverse().get(channel);
 			textChannel.sendMessage(
 					String.format("**\\*%s\\*** _%s_",
@@ -280,5 +294,13 @@ public class IrcListener extends ListenerAdapter {
 
 	private Configuration config() {
 		return Main.config[configID];
+	}
+
+	private IRCChannelConfiguration channelConfig(MessageEvent event) {
+		return channelConfig(event.getChannel().getName());
+	}
+
+	private IRCChannelConfiguration channelConfig(String channel) {
+		return config().channelOptions.IRC.get(channel);
 	}
 }
