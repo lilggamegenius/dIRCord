@@ -18,6 +18,9 @@ import org.pircbotx.hooks.events.*;
 import org.pircbotx.hooks.types.GenericChannelEvent;
 import org.slf4j.LoggerFactory;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
 import static com.LilG.utils.LilGUtil.startsWithAny;
@@ -240,7 +243,13 @@ public class IrcListener extends ListenerAdapter {
 	public void onTopic(TopicEvent event) {
 		TextChannel channel = getDiscordChannel(event);
 		if (channel == null) return; //only possible if IRC-OP sajoins bot to another channel
-		channel.sendMessage(String.format("%s has changed topic to: `%s`", event.getUser().getHostmask(), event.getTopic())).queue();
+		Date time = new Date(event.getDate());
+		SimpleDateFormat format = new SimpleDateFormat("EEE, d MMM yyyy h:mm:ss a Z");
+		if (event.isChanged()) {
+			channel.sendMessage(String.format("%s has changed topic to: `%s` at %s", event.getUser().getHostmask(), event.getTopic(), format.format(time))).queue();
+		} else {
+			channel.sendMessage(String.format("Current Topic : `%s` set by %s at %s", event.getTopic(), event.getUser().getHostmask(), format.format(time))).queue();
+		}
 	}
 
 	@Override

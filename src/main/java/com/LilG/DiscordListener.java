@@ -126,7 +126,8 @@ public class DiscordListener extends ListenerAdapter {
 			}
 			LOGGER.info(String.format("#%s: <%s!%s@%s> %s", event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getRawContent()));
 
-			if (event.getMember().equals(event.getGuild().getSelfMember()) ||
+			if (event.getAuthor().isFake() ||
+					event.getMember().equals(event.getGuild().getSelfMember()) ||
 					handleCommand(event)) {
 				return;
 			}
