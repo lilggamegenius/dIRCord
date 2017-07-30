@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger;
 import com.LilG.Config.Configuration;
 import com.LilG.Config.DiscordChannelConfiguration;
 import com.LilG.utils.LilGUtil;
+import com.google.common.base.Splitter;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.TextChannel;
@@ -148,12 +149,30 @@ public class DiscordListener extends ListenerAdapter {
 							formatString(event.getMessage().getContent())
 					);
 				} else {
-					channel.send().message(
-							String.format("<%s> %s",
-									formatMember(event.getMember()),
-									formatString(event.getMessage().getContent())
-							)
-					);
+					//:<hostmask> PRIVMSG #<channel> :<msg>
+					String msgLen = ":" + channel.getBot().getUserBot().getHostmask() + " PRIVMSG " + channel.getName() + " :" + message;
+					if (msgLen.length() > 500) {
+						int hostMaskLen = channel.getBot().getUserBot().getHostmask().length();
+						int channelLen = channel.getName().length();
+						String user = formatMember(event.getMember());
+						String msg = formatString(event.getMessage().getContent());
+						Iterable<String> msgs = Splitter.fixedLength(490 - (user.length() + hostMaskLen + channelLen)).split(msg);
+						for (String str : msgs) {
+							channel.send().message(
+									String.format("<%s> %s",
+											user,
+											str
+									)
+							);
+						}
+					} else {
+						channel.send().message(
+								String.format("<%s> %s",
+										formatMember(event.getMember()),
+										formatString(event.getMessage().getContent())
+								)
+						);
+					}
 				}
 			}
 			List<Message.Attachment> attachments;
