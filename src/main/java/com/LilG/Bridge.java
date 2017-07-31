@@ -473,6 +473,9 @@ class Bridge {
 					message = message.replace('_', italics);
 				}
 			} else {
+				if (italicsCount == 2) {
+					message = '\0' + message; //.replace("_", "");
+				} // else
 				message = message.replace('_', italics);
 			}
 		}

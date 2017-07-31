@@ -150,13 +150,13 @@ public class DiscordListener extends ListenerAdapter {
 							formatString(event.getMessage().getContent())
 					);
 				} else {
+					String user = formatMember(event.getMember());
+					String msg = formatString(event.getMessage().getContent());
 					//:<hostmask> PRIVMSG #<channel> :<msg>\r\n
 					String msgLen = ":" + channel.getBot().getUserBot().getHostmask() + " PRIVMSG " + channel.getName() + " :" + message;
 					if (msgLen.length() > 500) {
 						int hostMaskLen = channel.getBot().getUserBot().getHostmask().length();
 						int channelLen = channel.getName().length();
-						String user = formatMember(event.getMember());
-						String msg = formatString(event.getMessage().getContent());
 						Iterable<String> msgs = Splitter.fixedLength(490 - (user.length() + hostMaskLen + channelLen)).split(msg);
 						for (String str : msgs) {
 							channel.send().message(
@@ -167,12 +167,21 @@ public class DiscordListener extends ListenerAdapter {
 							);
 						}
 					} else {
-						channel.send().message(
-								String.format("<%s> %s",
-										formatMember(event.getMember()),
-										formatString(event.getMessage().getContent())
-								)
-						);
+						if (msg.startsWith("\0")) {
+							channel.send().message(
+									String.format("*%s* %s",
+											user,
+											msg.substring(1)
+									)
+							);
+						} else {
+							channel.send().message(
+									String.format("<%s> %s",
+											user,
+											msg
+									)
+							);
+						}
 					}
 				}
 			}
