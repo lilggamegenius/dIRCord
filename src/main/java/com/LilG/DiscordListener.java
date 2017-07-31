@@ -5,6 +5,7 @@ import com.LilG.Config.Configuration;
 import com.LilG.Config.DiscordChannelConfiguration;
 import com.LilG.utils.LilGUtil;
 import com.google.common.base.Splitter;
+import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.TextChannel;
@@ -239,8 +240,23 @@ public class DiscordListener extends ListenerAdapter {
 
 	public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
 		Member user = event.getMember();
-		if (user.equals(event.getGuild().getSelfMember())) {
+		Member self = event.getGuild().getSelfMember();
+		boolean same = false;
+		if (user.equals(self)) {
 			return;
+		}
+		if (user.getEffectiveName().equalsIgnoreCase(self.getEffectiveName())) {
+			if (self.hasPermission(Permission.NICKNAME_MANAGE) && self.canInteract(user)) {
+				event.getGuild().getController().setNickname(user, event.getPrevNick()).reason("Same nick as bridge bot").queue();
+			} else {
+				same = true;
+				event.getGuild().getPublicChannel().sendMessage(String.format(
+						"User %s!%s@%s has the same name as the bridge bot",
+						user.getEffectiveName(),
+						user.getUser().getName(),
+						user.getUser().getId()))
+						.queue();
+			}
 		}
 		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
 			Channel channel = config().channelMapObj.get(textChannel);
@@ -256,13 +272,12 @@ public class DiscordListener extends ListenerAdapter {
 			} else if (newNick == null) {
 				newNick = username;
 			}
-			channel.send().message(String.format("\u001D*%s\u001D* %s%s",
+			channel.send().message(String.format("\u001D*%s\u001D* Has changed nick to %s%s",
 					formatMember(user, prevNick),
-					"Has changed nick to ",
-					formatMember(user, newNick)
+					formatMember(user, newNick),
+					same ? " And now shares the name with the bridge bot" : ""
 					)
-			)
-			;
+			);
 		}
 	}
 
