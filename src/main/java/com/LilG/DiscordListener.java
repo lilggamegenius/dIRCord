@@ -149,7 +149,7 @@ public class DiscordListener extends ListenerAdapter {
 							formatString(event.getMessage().getContent())
 					);
 				} else {
-					//:<hostmask> PRIVMSG #<channel> :<msg>
+					//:<hostmask> PRIVMSG #<channel> :<msg>\r\n
 					String msgLen = ":" + channel.getBot().getUserBot().getHostmask() + " PRIVMSG " + channel.getName() + " :" + message;
 					if (msgLen.length() > 500) {
 						int hostMaskLen = channel.getBot().getUserBot().getHostmask().length();
@@ -198,6 +198,7 @@ public class DiscordListener extends ListenerAdapter {
 		if (channel == null) {
 			return;
 		}
+
 		// Afaik Discord doesn't have info for who changed a topic
 		channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
 	}

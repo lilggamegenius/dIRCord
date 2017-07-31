@@ -230,17 +230,27 @@ class Bridge {
 				if (IRC) {
 					//"#bridge-test": "#SSRG-Test"
 					MessageEvent event = (MessageEvent) eventObj;
-					if (event.getChannel().getUserLevels(event.getUser()) != null) {
+					if (checkPerm(configID, event)) {
 						Main.rehash();
 					}
 				} else {
 					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-					if (event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
+					if (checkPerm(configID, event)) {
 						Main.rehash();
 					}
 				}
 			}
 		}
+	}
+
+	static boolean checkPerm(byte configID, MessageEvent event) {
+		return event.getChannel().getUserLevels(event.getUser()) != null ||
+				LilGUtil.matchHostMask(event.getUserHostmask().getHostmask(), Main.config[configID].IRCBotOwnerHostmask);
+	}
+
+	static boolean checkPerm(byte configID, GuildMessageReceivedEvent event) {
+		return event.getMember().hasPermission(Permission.ADMINISTRATOR) ||
+				event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID);
 	}
 
 	static void handleCommand(String[] message, Object event, byte configID, boolean IRC) {

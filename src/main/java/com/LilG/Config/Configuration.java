@@ -32,6 +32,9 @@ public class Configuration {
 	public boolean ircNickColor = false;
 	public String discordToken = "<Missing discord token in config>";
 
+	public String IRCBotOwnerHostmask;
+	public String DiscordBotOwnerID;
+
 	public Map<String, String> channelMapping = HashBiMap.create();
 
 	public ChannelConfigs channelOptions = new ChannelConfigs();
