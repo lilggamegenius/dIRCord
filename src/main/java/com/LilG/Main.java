@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.security.auth.login.LoginException;
 import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -67,7 +68,7 @@ public class Main {
 					Thread.sleep(60 * 1000);
 					if (Main.lastActivity + 1000 * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
 						LOGGER.trace("Checking for new build");
-						Main.checkForNewBuild();
+						Main.checkForNewBuild(args);
 					}
 				}
 			} catch (InterruptedException ignored) {
@@ -145,7 +146,7 @@ public class Main {
 
 	}
 
-	private static void checkForNewBuild() throws URISyntaxException, IOException {
+	private static void checkForNewBuild(String args[]) throws URISyntaxException, IOException {
 		if (Thread.holdsLock(kvircFlags)) return;
 		synchronized (kvircFlags) {
 			File newJar = new File(thisJar.getParent(), thisJar.getName() + ".new");
@@ -159,6 +160,17 @@ public class Main {
 			for (Configuration configuration : config) {
 				configuration.jda.shutdown();
 			}
+			StringBuilder cmd = new StringBuilder();
+			cmd.append(System.getProperty("java.home")).append(File.separator).append("bin").append(File.separator).append("java ");
+			for (String jvmArg : ManagementFactory.getRuntimeMXBean().getInputArguments()) {
+				cmd.append(jvmArg).append(" ");
+			}
+			cmd.append("-cp ").append(ManagementFactory.getRuntimeMXBean().getClassPath()).append(" ");
+			cmd.append(Main.class.getName()).append(" ");
+			for (String arg : args) {
+				cmd.append(arg).append(" ");
+			}
+			Runtime.getRuntime().exec(cmd.toString());
 			System.exit(1); // tell wrapper that new jar was found
 		}
 	}

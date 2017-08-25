@@ -250,24 +250,31 @@ public class LilGUtil {
 	 * otherwise.
 	 */
 	public static boolean wildCardMatch(@NotNull String text, @NotNull String pattern) {
-		// Create the cards by splitting using a RegEx. If more speed
-		// is desired, a simpler character based splitting can be done.
-		String[] cards = pattern.split("\\*");
+		int i = 0;
+		int j = 0;
+		int starIndex = -1;
+		int iIndex = -1;
 
-		// Iterate over the cards.
-		for (String card : cards) {
-			int idx = text.indexOf(card);
-
-			// Card not detected in the text.
-			if (idx == -1) {
+		while (i < text.length()) {
+			if (j < pattern.length() && (pattern.charAt(j) == '?' || pattern.charAt(j) == text.charAt(i))) {
+				++i;
+				++j;
+			} else if (j < pattern.length() && pattern.charAt(j) == '*') {
+				starIndex = j;
+				iIndex = i;
+				j++;
+			} else if (starIndex != -1) {
+				j = starIndex + 1;
+				i = iIndex + 1;
+				iIndex++;
+			} else {
 				return false;
 			}
-
-			// Move ahead, towards the right of the text.
-			text = text.substring(idx + card.length());
 		}
-
-		return true;
+		while (j < pattern.length() && pattern.charAt(j) == '*') {
+			++j;
+		}
+		return j == pattern.length();
 	}
 
 	public static boolean matchHostMask(@NotNull String hostmask, @NotNull String pattern) {

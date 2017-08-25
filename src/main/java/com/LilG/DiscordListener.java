@@ -111,6 +111,7 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
+		Main.lastActivity = System.currentTimeMillis();
 		try {
 			String discordNick = "Error nick";
 			String discordUsername = "Error UserName";
@@ -152,6 +153,15 @@ public class DiscordListener extends ListenerAdapter {
 				} else {
 					String user = formatMember(event.getMember());
 					String msg = formatString(event.getMessage().getContent());
+					List<String> spamFilterList = config().channelOptions.IRC.get(channel.getName()).spamFilterList;
+					if (spamFilterList.size() != 0) {
+						for (String match : spamFilterList) {
+							if (LilGUtil.wildCardMatch(msg, match)) {
+								event.getMessage().delete().reason("in spam filter list of " + channel.getName()).queue();
+								return;
+							}
+						}
+					}
 					//:<hostmask> PRIVMSG #<channel> :<msg>\r\n
 					String msgLen = ":" + channel.getBot().getUserBot().getHostmask() + " PRIVMSG " + channel.getName() + " :" + message;
 					if (msgLen.length() > 500) {
@@ -199,7 +209,6 @@ public class DiscordListener extends ListenerAdapter {
 		} catch (Exception e) {
 			LOGGER.error("Error in DiscordListener" + errorMsg, e);
 		}
-		Main.lastActivity = System.currentTimeMillis();
 	}
 
 	@Override

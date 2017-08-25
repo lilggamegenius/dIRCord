@@ -14,12 +14,14 @@ import org.pircbotx.User;
 import org.pircbotx.UserLevel;
 import org.pircbotx.hooks.Event;
 import org.pircbotx.hooks.ListenerAdapter;
+import org.pircbotx.hooks.WaitForQueue;
 import org.pircbotx.hooks.events.*;
 import org.pircbotx.hooks.types.GenericChannelEvent;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
@@ -164,6 +166,7 @@ public class IrcListener extends ListenerAdapter {
 	@Override
 	public void onJoin(JoinEvent event) {
 		IRCChannelConfiguration configuration = channelConfig(event.getChannel().getName());
+		getSpamList(event.getChannel());
 		if (configuration == null) {
 			configuration = new IRCChannelConfiguration();
 			config().channelOptions.IRC.put(event.getChannel().getName(), configuration);
@@ -212,6 +215,9 @@ public class IrcListener extends ListenerAdapter {
 
 	@Override
 	public void onMode(ModeEvent event) {
+		if (event.getMode().contains("g")) {
+			getSpamList(event.getChannel());
+		}
 		getDiscordChannel(event).sendMessage(
 				String.format("**\\*%s\\*** _%s_",
 						formatName(event.getUser()),
@@ -299,6 +305,36 @@ public class IrcListener extends ListenerAdapter {
 			}
 		}
 		LOGGER.info("Filled channel map");
+	}
+
+	public void getSpamList(final Channel channel) {
+		new Thread(() -> {
+			WaitForQueue queue = new WaitForQueue(channel.getBot());
+			//Infinite loop since we might recieve messages that aren't WaitTest's.
+			channel.send().setMode("+g");
+			try {
+				List<String> spamFilterList = config().channelOptions.IRC.get(channel.getName()).spamFilterList;
+				spamFilterList.clear();
+				while (true) {
+					//Use the waitFor() method to wait for a ServerResponseEvent.
+					//This will block (wait) until a ServerResponseEvent comes in, ignoring
+					//everything else
+					ServerResponseEvent currentEvent = queue.waitFor(ServerResponseEvent.class);
+					//Check if this message is the "ping" command
+					if (currentEvent.getCode() == 941) {
+						spamFilterList.add(currentEvent.getParsedResponse().get(2));
+					} else if (currentEvent.getCode() == 940) {
+						LOGGER.trace("End of channel spam Filter list");
+						queue.close();
+						//Very important that we end the infinite loop or else the test
+						//will continue forever!
+						return;
+					}
+				}
+			} catch (InterruptedException e) {
+				LOGGER.warn("Getting spam filter list interrupted", e);
+			}
+		}).start();
 	}
 
 	private Configuration config() {
