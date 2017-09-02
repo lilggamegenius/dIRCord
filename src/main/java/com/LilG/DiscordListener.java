@@ -30,8 +30,8 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
  * Created by lil-g on 12/12/16.
  */
 public class DiscordListener extends ListenerAdapter {
-	private final static char colorCode = '\u0003';
-	private final static char zeroWidthSpace = '\u200B';
+	public final static char colorCode = '\u0003';
+	public final static char zeroWidthSpace = '\u200B';
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
 	private final byte configID;
 	public volatile boolean ready;

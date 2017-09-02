@@ -5,10 +5,7 @@ import com.LilG.utils.LilGUtil;
 import com.google.common.collect.ImmutableSortedSet;
 import net.dv8tion.jda.core.OnlineStatus;
 import net.dv8tion.jda.core.Permission;
-import net.dv8tion.jda.core.entities.Game;
-import net.dv8tion.jda.core.entities.Member;
-import net.dv8tion.jda.core.entities.Role;
-import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.Channel;
@@ -59,7 +56,7 @@ class Bridge {
 					sendMessage(eventObj, "Run of the mill help command, for help with a command, just use the command name as the argument. List of commands [whois, ison]", IRC);
 				}
 			}
-			break;
+			return;
 			case "whois": {
 				if (args.length > 0) {
 					String name = argJoiner(args, 0);
@@ -176,7 +173,7 @@ class Bridge {
 					sendMessage(eventObj, "Missing argument", IRC);
 				}
 			}
-			break;
+			return;
 			case "ison": {
 				if (args.length > 0) {
 					String name = argJoiner(args, 0);
@@ -215,7 +212,7 @@ class Bridge {
 					}
 				}
 			}
-			break;
+			return;
 			case "topic": {
 				if (IRC) {
 					MessageEvent event = (MessageEvent) eventObj;
@@ -225,10 +222,9 @@ class Bridge {
 					sendMessage(eventObj, String.format("Topic: %s", event.getChannel().getTopic()), IRC);
 				}
 			}
-			break;
+			return;
 			case "rehash": {
 				if (IRC) {
-					//"#bridge-test": "#SSRG-Test"
 					MessageEvent event = (MessageEvent) eventObj;
 					if (checkPerm(configID, event)) {
 						Main.rehash();
@@ -239,9 +235,63 @@ class Bridge {
 						Main.rehash();
 					}
 				}
+			}return;
+			case "prune": {
+				TextChannel channel;
+				List<Message> messages;
+				String pattern = args[0];
+				String user = "*";
+				//String pruner;
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					if (checkPerm(configID, event)) {
+						channel = getDiscordChannel(configID, event);
+						//pruner = event.getUser().getNick();
+					} else {
+						return;
+					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					if (checkPerm(configID, event)) {
+						channel = event.getChannel();
+						//pruner = event.getMember().getEffectiveName();
+					} else {
+						return;
+					}
+				}
+
+				messages = channel.getHistory().retrievePast(100).complete();
+				if(LilGUtil.equalsAnyIgnoreCase(pattern, "-u", "--user")){
+					if(args.length <3){
+						if(IRC){
+							((MessageEvent) eventObj).respond("Missing args");
+						} else {
+							channel.sendMessage("Missing args").queue();
+						}
+						return;
+					}
+					user = args[1];
+					pattern = args[2];
+				}
+
+				for(Message message : messages){
+					if(message.getMember() != channel.getGuild().getSelfMember()) continue;
+					if(LilGUtil.wildCardMatch(message.getStrippedContent().replace(DiscordListener.zeroWidthSpace + "", ""),
+							"<*" + user + "> " + pattern)){
+						message.delete()/*.reason("Pruned by " + pruner + " on " + (IRC ? "IRC" : "Discord"))*/.queue();
+					}
+				}
 			}
 		}
 	}
+
+	/* command template
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+				}
+	 */
 
 	static boolean checkPerm(byte configID, MessageEvent event) {
 		return event.getChannel().getUserLevels(event.getUser()) != null ||

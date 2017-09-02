@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="dIRCord" external.linked.project.path="/media/lil-g/OS/Users/ggonz/workspace/dIRCord" external.root.project.path="$MODULE_DIR$/../../.." external.system.id="GRADLE" external.system.module.group="com.LilG" external.system.module.version="1.0" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file:///media/lil-g/OS/Users/ggonz/workspace/dIRCord">
+      <excludeFolder url="file:///media/lil-g/OS/Users/ggonz/workspace/dIRCord/.gradle" />
+      <excludeFolder url="file:///media/lil-g/OS/Users/ggonz/workspace/dIRCord/build" />
+      <excludeFolder url="file:///media/lil-g/OS/Users/ggonz/workspace/dIRCord/out" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
