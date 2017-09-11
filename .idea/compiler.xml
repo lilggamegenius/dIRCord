@@ -4,6 +4,8 @@
     <bytecodeTargetLevel>
       <module name="dIRCord_main" target="1.8" />
       <module name="dIRCord_test" target="1.8" />
+      <module name="workspace-dIRCord_main" target="1.8" />
+      <module name="workspace-dIRCord_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

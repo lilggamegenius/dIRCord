@@ -268,7 +268,7 @@ public class DiscordListener extends ListenerAdapter {
 				event.getGuild().getController().setNickname(user, event.getPrevNick()).reason("Same nick as bridge bot").queue();
 			} else {
 				same = true;
-				event.getGuild().getPublicChannel().sendMessage(String.format(
+				event.getGuild().getDefaultChannel().sendMessage(String.format(
 						"User %s!%s@%s has the same name as the bridge bot",
 						user.getEffectiveName(),
 						user.getUser().getName(),

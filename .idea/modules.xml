@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/354981803/dIRCord_main.iml" filepath="$PROJECT_DIR$/.idea/modules/354981803/dIRCord_main.iml" group="dIRCord" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/354981803/dIRCord_test.iml" filepath="$PROJECT_DIR$/.idea/modules/354981803/dIRCord_test.iml" group="dIRCord" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/354981803/workspace-dIRCord.iml" filepath="$PROJECT_DIR$/.idea/modules/354981803/workspace-dIRCord.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dIRCord.iml" filepath="$PROJECT_DIR$/.idea/modules/dIRCord.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/workspace-dIRCord_main.iml" filepath="$PROJECT_DIR$/.idea/modules/workspace-dIRCord_main.iml" group="dIRCord" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/workspace-dIRCord_test.iml" filepath="$PROJECT_DIR$/.idea/modules/workspace-dIRCord_test.iml" group="dIRCord" />
     </modules>
   </component>
 </project>

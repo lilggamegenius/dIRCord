@@ -454,6 +454,7 @@ class Bridge {
 		final char italics = '\u001D';
 		final char bold = '\u0002';
 		final char reverse = '\u0016';
+		message = message.replace("%", "%%");
 		// find links
 		String[] parts = message.split("\\s+");
 		int i = 0;
