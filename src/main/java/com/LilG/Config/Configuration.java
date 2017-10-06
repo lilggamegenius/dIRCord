@@ -41,6 +41,8 @@ public class Configuration {
 
 	public int minutesOfInactivityToUpdate = 10;
 
+	public Map<String, String> AutoBan = new HashMap<>();
+
 	public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
 	public transient IrcListener ircListener;
 	public transient DiscordListener discordListener;

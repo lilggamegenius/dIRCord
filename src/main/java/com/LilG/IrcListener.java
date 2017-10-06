@@ -249,12 +249,13 @@ public class IrcListener extends ListenerAdapter {
 	public void onTopic(TopicEvent event) {
 		TextChannel channel = getDiscordChannel(event);
 		if (channel == null) return; //only possible if IRC-OP sajoins bot to another channel
-		Date time = new Date(event.getDate());
+		Date time = new Date(event.getDate() * (event.isChanged() ? 1 : 1000));
 		SimpleDateFormat format = new SimpleDateFormat("EEE, d MMM yyyy h:mm:ss a Z");
+		String formattedTime = format.format(time);
 		if (event.isChanged()) {
-			channel.sendMessage(String.format("%s has changed topic to: `%s` at %s", event.getUser().getHostmask(), event.getTopic(), format.format(time))).queue();
+			channel.sendMessage(String.format("%s has changed topic to: `%s` at %s", event.getUser().getHostmask(), event.getTopic(), formattedTime)).queue();
 		} else {
-			channel.sendMessage(String.format("Current Topic : `%s` set by %s at %s", event.getTopic(), event.getUser().getHostmask(), format.format(time))).queue();
+			channel.sendMessage(String.format("Current Topic: `%s` set by %s at %s", event.getTopic(), event.getUser().getHostmask(), formattedTime)).queue();
 		}
 	}
 

@@ -153,6 +153,21 @@ public class DiscordListener extends ListenerAdapter {
 				} else {
 					String user = formatMember(event.getMember());
 					String msg = formatString(event.getMessage().getContent());
+					Map<String, String> autoBan = config().AutoBan;
+					if (autoBan.keySet().size() != 0) {
+						for (String match : autoBan.keySet()) {
+							if (LilGUtil.wildCardMatch(msg, match)) {
+								String reason = autoBan.get(match);
+								event.getAuthor().openPrivateChannel().queue(
+										author -> author.sendMessage("You were banned: " + reason).queue(s -> {
+											event.getGuild().getController().ban(event.getMember(), 0, reason).queue();
+										})
+								);
+								event.getMessage().delete().reason(reason).queue();
+								return;
+							}
+						}
+					}
 					List<String> spamFilterList = config().channelOptions.IRC.get(channel.getName()).spamFilterList;
 					if (spamFilterList.size() != 0) {
 						for (String match : spamFilterList) {
