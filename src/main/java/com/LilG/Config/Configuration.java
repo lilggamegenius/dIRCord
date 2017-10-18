@@ -42,6 +42,7 @@ public class Configuration {
 	public int minutesOfInactivityToUpdate = 10;
 
 	public Map<String, String> AutoBan = new HashMap<>();
+	public List<String> BanOnSight = new ArrayList<>();
 
 	public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
 	public transient IrcListener ircListener;

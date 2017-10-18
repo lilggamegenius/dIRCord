@@ -3,6 +3,8 @@ package com.LilG;
 import ch.qos.logback.classic.Logger;
 import com.LilG.utils.LilGUtil;
 import com.google.common.collect.ImmutableSortedSet;
+import me.xdrop.fuzzywuzzy.FuzzySearch;
+import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import net.dv8tion.jda.core.OnlineStatus;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.*;
@@ -17,7 +19,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by ggonz on 4/4/2017.
@@ -281,7 +285,20 @@ class Bridge {
 						message.delete()/*.reason("Pruned by " + pruner + " on " + (IRC ? "IRC" : "Discord"))*/.queue();
 					}
 				}
-			}
+			} break;
+			/*case "ban":{
+				String name = argJoiner(args, 0);
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+
+					List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
+					if (!members.isEmpty()) {
+
+					} else {
+						event.respond(String.format("No one with the name \"%s\" was found", name));
+					}
+				}
+			}break;*/
 		}
 	}
 
@@ -423,8 +440,35 @@ class Bridge {
 				}
 				strToFormat = argJoiner(message);
 			}
-			String strLower = strToFormat.toLowerCase();
-			boolean usesNick;
+			Map<String, Member> names = new HashMap<>();
+			for (Member member : channel.getMembers()) {
+				names.put(member.getUser().getName(), member);
+				if(member.getNickname() != null){
+					names.put(member.getNickname(), member);
+				}
+			}
+			//String strLower = strToFormat.toLowerCase();
+			//boolean usesNick;
+			String[] message = strToFormat.split(" ");
+			int score;
+			for (String aMessage : message) {
+				if(!aMessage.startsWith("@")) continue;
+				ExtractedResult result1 = FuzzySearch.extractOne(aMessage.substring(1), names.keySet());
+				score = result1.getScore();
+				score -= Math.abs(aMessage.replace(" ", "").length() - result1.getString().replace(" ", "").length())*4;
+				LOGGER.debug(String.format("Found Name %s from %s with score %d. Mention %s",
+						result1.getString(),
+						aMessage,
+						score,
+						names.get(result1.getString()).getAsMention()
+				));
+				if(score < 75){
+					LOGGER.debug("Ignoring mention");
+					continue;
+				}
+				strToFormat = strToFormat.replace(aMessage, names.get(result1.getString()).getAsMention());
+			}
+			/*
 			for (Member member : channel.getMembers()) {
 				String memberName = member.getEffectiveName().toLowerCase();
 				String userName = member.getUser().getName().toLowerCase();
@@ -441,9 +485,10 @@ class Bridge {
 					strLower = strToFormat.toLowerCase();
 				}
 			}
+			*/
 		}
 		if (strToFormat.contains(color + "")) {
-			strToFormat = strToFormat.replaceAll(color + "[0-9]{2}", "");
+			strToFormat = strToFormat.replaceAll(color + "[0-9]{1,2},[0-9]{1,2}", "").replaceAll(color + "[0-9]{1,2}", "");
 		}
 
 		return strToFormat;

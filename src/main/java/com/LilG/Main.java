@@ -190,7 +190,7 @@ public class Main {
 				if (!config.server.equals(Main.config[i].server) ||
 						config.port != Main.config[i].port ||
 						config.SSL != Main.config[i].SSL) {
-					LOGGER.info("IRC server changes will take affect on next restart change will take affect on next restart");
+					LOGGER.info("IRC server changes will take affect on next restart");
 					continue;
 				}
 				config.channelMapping = HashBiMap.create(config.channelMapping);

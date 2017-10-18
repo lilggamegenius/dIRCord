@@ -20,7 +20,7 @@
       </library>
     </orderEntry>
     <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.8.0" level="project" />
-    <orderEntry type="library" name="Gradle: net.dv8tion:JDA:3.3.1_284" level="project" />
+    <orderEntry type="library" name="Gradle: net.dv8tion:JDA:3.3.1_291" level="project" />
     <orderEntry type="library" name="Gradle: com.github.TheLQ:pircbotx:master-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Gradle: me.xdrop:fuzzywuzzy:1.1.9" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:guava:19.0" level="project" />

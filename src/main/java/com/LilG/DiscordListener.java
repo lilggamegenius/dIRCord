@@ -12,6 +12,7 @@ import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.channel.text.GenericTextChannelEvent;
 import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateTopicEvent;
+import net.dv8tion.jda.core.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
@@ -291,11 +292,14 @@ public class DiscordListener extends ListenerAdapter {
 						.queue();
 			}
 		}
+		Channel channel = null;
+		TextChannel textChannel1 = null;
 		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
-			Channel channel = config().channelMapObj.get(textChannel);
+			channel = config().channelMapObj.get(textChannel);
 			if (channel == null) {
 				continue;
 			}
+			textChannel1 = textChannel;
 
 			String prevNick = event.getPrevNick();
 			String newNick = event.getNewNick();
@@ -311,6 +315,57 @@ public class DiscordListener extends ListenerAdapter {
 					same ? " And now shares the name with the bridge bot" : ""
 					)
 			);
+		}
+		final Channel channel1 = channel;
+		final TextChannel textChannel2 = textChannel1;
+		String hostmask = user.getEffectiveName() + "!" + user.getUser().getName() + "@" + user.getUser().getId();
+		for(String masksToBan : config().BanOnSight){
+			if(LilGUtil.matchHostMask(hostmask, masksToBan)){
+				event.getGuild().getController().ban(user, 0, "Ban On Sight: " + masksToBan).queue(s ->
+						textChannel2.sendMessage(String.format("User %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d->{
+							if(channel1 != null) {
+								channel1.send().message(String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
+										formatMember(user, user.getEffectiveName())
+										)
+								);
+							}
+						})
+				);
+				return;
+			}
+		}
+	}
+
+	public void onGuildMemberJoin(GuildMemberJoinEvent event){
+		Member user = event.getMember();
+		Channel channel = null;
+		TextChannel textChannel = null;
+		for (TextChannel textChannel2 : event.getGuild().getTextChannels()) {
+			channel = config().channelMapObj.get(textChannel2);
+			textChannel = textChannel2;
+			if (channel != null) {
+				break;
+			}
+		}
+		if (channel == null) {
+			return;
+		}
+		final Channel channel1 = channel;
+		final TextChannel textChannel1 = textChannel;
+		String hostmask = user.getEffectiveName() + "!" + user.getUser().getName() + "@" + user.getUser().getId();
+		for(String masksToBan : config().BanOnSight){
+			if(LilGUtil.matchHostMask(hostmask, masksToBan)){
+				event.getGuild().getController().ban(user, 0, "Ban On Sight: " + masksToBan).queue(s ->
+						textChannel1.sendMessage(String.format("Joining user %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d->
+								channel1.send().message(
+										String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
+											formatMember(user, user.getEffectiveName())
+										)
+								)
+						)
+				);
+				return;
+			}
 		}
 	}
 
