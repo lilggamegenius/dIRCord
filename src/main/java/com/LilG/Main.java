@@ -12,6 +12,7 @@ import net.dv8tion.jda.core.JDABuilder;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.exceptions.RateLimitedException;
+import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.MultiBotManager;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.slf4j.LoggerFactory;
@@ -59,7 +60,7 @@ public class Main {
 		lastModified = lastModified_;
 	}
 
-	public static void main(String args[]) throws LoginException, InterruptedException, RateLimitedException {
+	public static void main(String args[]) {
 		LOGGER.setLevel(Level.ALL);
 		new Thread(() -> {
 			try {
@@ -99,11 +100,13 @@ public class Main {
 						.setEncoding(Charset.forName("UTF-8"))
 						.setAutoReconnect(true)
 						.setAutoReconnectAttempts(attempts)
-						.setNickservPassword(config.nickservPassword)
 						.setName(config.nickname) //Set the nick of the bot.
 						.setLogin(config.userName)
 						.setAutoSplitMessage(config.autoSplitMessage)
 						.setRealName(kvircFlags + config.realName);
+				if(StringUtils.isNotBlank(config.nickservPassword)){
+					configBuilder.setNickservPassword(config.nickservPassword);
+				}
 				for (String channel : config.channelMapping.values()) {
 					String[] channelValues = channel.split(" ", 1);
 					if (channelValues.length > 1) {
@@ -146,7 +149,7 @@ public class Main {
 
 	}
 
-	private static void checkForNewBuild(String args[]) throws URISyntaxException, IOException {
+	private static void checkForNewBuild(String args[]) throws IOException {
 		if (Thread.holdsLock(kvircFlags)) return;
 		synchronized (kvircFlags) {
 			File newJar = new File(thisJar.getParent(), thisJar.getName() + ".new");

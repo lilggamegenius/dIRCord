@@ -24,7 +24,7 @@ public class Configuration {
 	public String server = "<Missing server in config>";
 	public int port = 6667;
 	public boolean SSL = false;
-	public String nickservPassword = "<Missing nickserv password in config>";
+	public String nickservPassword = null;
 	public boolean autoSplitMessage = false;
 	public List<String> autoSendCommands = new ArrayList<>();
 	public boolean floodProtection = true;
@@ -54,7 +54,7 @@ public class Configuration {
 		public final Map<String, DiscordChannelConfiguration> Discord;
 		public final Map<String, IRCChannelConfiguration> IRC;
 
-		public ChannelConfigs() {
+		ChannelConfigs() {
 			Discord = new HashMap<>();
 			IRC = new HashMap<>();
 		}
