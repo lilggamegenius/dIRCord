@@ -18,9 +18,9 @@ import java.util.Map;
  */
 
 public class Configuration {
-	public String nickname = "dIRCord<Missing nick in config>";
-	public String userName = "dIRCord<Missing username in config>";
-	public String realName = "dIRCord - Discord IRC Bridge";
+	public String nickname = "dIRCord"; //<Missing nick in config>
+	public String userName = nickname;
+	public String realName = nickname + " " + userName;
 	public String server = "<Missing server in config>";
 	public int port = 6667;
 	public boolean SSL = false;

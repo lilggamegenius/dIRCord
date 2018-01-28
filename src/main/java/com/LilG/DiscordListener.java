@@ -96,7 +96,7 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	private boolean handleCommand(GuildMessageReceivedEvent event) {
-		String[] message = LilGUtil.splitMessage(event.getMessage().getRawContent());
+		String[] message = LilGUtil.splitMessage(event.getMessage().getContentRaw());
 		if (message.length == 0 || message[0].isEmpty()) {
 			return false;
 		}
@@ -128,14 +128,14 @@ public class DiscordListener extends ListenerAdapter {
 			} catch (Exception e) {
 				LOGGER.error("Error receiving message" + errorMsg, e);
 			}
-			LOGGER.info(String.format("#%s: <%s!%s@%s> %s", event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getRawContent()));
+			LOGGER.info(String.format("#%s: <%s!%s@%s> %s", event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getContentRaw()));
 
 			if (event.getAuthor().isFake() ||
 					event.getMember().equals(event.getGuild().getSelfMember()) ||
 					handleCommand(event)) {
 				return;
 			}
-			String message = event.getMessage().getContent();
+			String message = event.getMessage().getContentDisplay();
 			Channel channel = getIRCChannel(event);
 			if (channel == null) {
 				return;
@@ -149,11 +149,11 @@ public class DiscordListener extends ListenerAdapter {
 							)
 					);
 					channel.send().message(
-							formatString(event.getMessage().getContent())
+							formatString(event.getMessage().getContentDisplay())
 					);
 				} else {
 					String user = formatMember(event.getMember());
-					String msg = formatString(event.getMessage().getContent());
+					String msg = formatString(event.getMessage().getContentDisplay());
 					Map<String, String> autoBan = config().AutoBan;
 					if (autoBan.keySet().size() != 0) {
 						for (String match : autoBan.keySet()) {

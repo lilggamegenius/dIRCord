@@ -280,7 +280,7 @@ class Bridge {
 
 				for(Message message : messages){
 					if(message.getMember() != channel.getGuild().getSelfMember()) continue;
-					if(LilGUtil.wildCardMatch(message.getStrippedContent().replace(DiscordListener.zeroWidthSpace + "", ""),
+					if(LilGUtil.wildCardMatch(message.getContentStripped().replace(DiscordListener.zeroWidthSpace + "", ""),
 							"<*" + user + "> " + pattern)){
 						message.delete()/*.reason("Pruned by " + pruner + " on " + (IRC ? "IRC" : "Discord"))*/.queue();
 					}
@@ -489,6 +489,7 @@ class Bridge {
 		}
 		if (strToFormat.contains(color + "")) {
 			strToFormat = strToFormat.replaceAll(color + "[0-9]{1,2},[0-9]{1,2}", "").replaceAll(color + "[0-9]{1,2}", "");
+			strToFormat = strToFormat.replace(color + "", "");
 		}
 
 		return strToFormat;
