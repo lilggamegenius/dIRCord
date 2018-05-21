@@ -11,13 +11,11 @@ import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDABuilder;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.TextChannel;
-import net.dv8tion.jda.core.exceptions.RateLimitedException;
 import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.MultiBotManager;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.slf4j.LoggerFactory;
 
-import javax.security.auth.login.LoginException;
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.URISyntaxException;
@@ -39,7 +37,7 @@ public class Main {
 	private final static MultiBotManager manager = new MultiBotManager();
 	private final static File thisJar;
 	private final static long lastModified;
-	private final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	public final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	private static File configFile;
 	static long lastActivity = System.currentTimeMillis(); // activity as in people talking
 	static Configuration[] config;

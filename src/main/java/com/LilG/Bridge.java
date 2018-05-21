@@ -10,6 +10,10 @@ import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.egit.github.core.Gist;
+import org.eclipse.egit.github.core.GistFile;
+import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.service.GistService;
 import org.pircbotx.Channel;
 import org.pircbotx.User;
 import org.pircbotx.UserLevel;
@@ -17,8 +21,6 @@ import org.pircbotx.hooks.events.MessageEvent;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -286,19 +288,29 @@ class Bridge {
 					}
 				}
 			} break;
-			/*case "ban":{
+			case "ban": {
 				String name = argJoiner(args, 0);
 				if (IRC) {
 					MessageEvent event = (MessageEvent) eventObj;
+					if (!checkPerm(configID, event)) return;
 
-					List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
+					Guild guild = getDiscordChannel(configID, event).getGuild();
+					List<Member> members = guild.getMembersByEffectiveName(name, true);
 					if (!members.isEmpty()) {
-
+						if (members.size() == 1) {
+							guild.getController().ban(members.get(0), 0, "Banned by " + event.getUserHostmask()).queue();
+						} else {
+							event.respond(String.format("Found multiple users: %s", members.toString()));
+						}
 					} else {
 						event.respond(String.format("No one with the name \"%s\" was found", name));
 					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					if (!checkPerm(configID, event)) return;
 				}
-			}break;*/
+			}
+			break;
 		}
 	}
 
@@ -428,6 +440,7 @@ class Bridge {
 		}
 		if (strToFormat.contains("@")) {
 			strToFormat = strToFormat.replace("@everyone", "`@everyone`");
+			strToFormat = strToFormat.replace("@here", "`@here`");
 			if (strToFormat.contains(escapePrefix)) {
 				String[] message = LilGUtil.splitMessage(strToFormat, false);
 				for (int i = 0; i < message.length; i++) {
@@ -501,36 +514,57 @@ class Bridge {
 		final char bold = '\u0002';
 		final char reverse = '\u0016';
 		message = message.replace("%", "%%");
-		// find links
-		String[] parts = message.split("\\s+");
-		int i = 0;
-		boolean inBlockComment = false;
-		int blockCount = StringUtils.countMatches(message, "```");
-		for (int partsLength = parts.length; i < partsLength; i++) {
-			String item = parts[i];
+
+		boolean supportCodeBlocks = false;
+		GitHubClient client = new GitHubClient();
+		if (Main.config[0].GithubGistOAuthToken != null) {
+			supportCodeBlocks = true;
+			client.setOAuth2Token(Main.config[0].GithubGistOAuthToken);
+		} else if (Main.config[0].GithubCreds != null && Main.config[0].GithubCreds.length >= 2) {
+			supportCodeBlocks = true;
+			client.setCredentials(Main.config[0].GithubCreds[0], Main.config[0].GithubCreds[1]);
+		}
+
+		if (supportCodeBlocks) {
+			String[] codeblocks = StringUtils.substringsBetween(message, "```", "```");
+			String lang;
+			Gist gist = new Gist().setDescription("Discord code block");
+			Map<String, GistFile> files = new HashMap<>();
+
+			for (int i = 0; i < codeblocks.length; i++) {
+				lang = codeblocks[i].substring(0, codeblocks[i].indexOf('\n'));
+				GistFile file = new GistFile().setContent(codeblocks[i]);
+				if (lang.contains(" ")) {
+					files.put(String.format("Block%d.txt", i), file);
+				} else {
+					files.put(String.format("Block%d.%s", i, lang), file);
+				}
+			}
+
 			try {
-				new URL(item).toURI();
-				// If possible then replace with anchor...
-				message = message.replace(parts[i], "%" + (i + 1) + "$s");
-				continue;
-			} catch (IOException | URISyntaxException ignored) {
-			}
-			if (parts[i].startsWith("```") && blockCount > 1) {
-				inBlockComment = true;
-				message = message.replace(parts[i], "%" + (i + 1) + "$s");
-				blockCount--;
-				if (parts[i].endsWith("```")) {
-					inBlockComment = false;
-					blockCount--;
+				gist.setFiles(files);
+				gist = new GistService(client).createGist(gist);
+				String url = gist.getHtmlUrl();
+				byte index = 0;
+				for (GistFile file : gist.getFiles().values()) {
+					message = message.replace(
+							String.format("```%s```", file.getContent()),
+							String.format("%s#file-block%d-%s", url, index++,
+									file.getFilename().substring(
+											file.getFilename().lastIndexOf('.')
+									)
+							)
+					);
 				}
+			} catch (IOException e) {
+				LOGGER.error("Problem uploading gist", e);
 			}
-			if (inBlockComment) {
-				if (parts[i].endsWith("```")) {
-					inBlockComment = false;
-				}
-				message = message.replace(parts[i], "%" + (i + 1) + "$s");
-				blockCount--;
-			}
+		}
+
+		// find links
+		String[] parts = LilGUtil.extractUrls(message).toArray(new String[0]);
+		for (String url : parts) {
+			message = message.replace(url, "%s");
 		}
 
 		int inlineCodeCount = StringUtils.countMatches(message, "`");
@@ -588,7 +622,7 @@ class Bridge {
 		}
 		message = message
 				.replace('\u0007', '␇')
-				.replace('\n', '␤')
+				.replace("\n", " ␤")
 				.replace('\r', '␍');
 		return String.format(message, (Object[]) parts);
 	}

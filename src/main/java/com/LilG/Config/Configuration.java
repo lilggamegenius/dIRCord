@@ -34,6 +34,8 @@ public class Configuration {
 
 	public String IRCBotOwnerHostmask;
 	public String DiscordBotOwnerID;
+	public String GithubGistOAuthToken;
+	public String[] GithubCreds;
 
 	public Map<String, String> channelMapping = HashBiMap.create();
 

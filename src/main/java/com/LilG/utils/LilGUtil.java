@@ -287,9 +287,7 @@ public class LilGUtil {
 		String patternHostname = pattern.substring(pattern.indexOf("@") + 1);
 		if (wildCardMatch(nick, patternNick)) {
 			if (wildCardMatch(userName, patternUserName)) {
-				if (wildCardMatch(hostname, patternHostname)) {
-					return true;
-				}
+				return wildCardMatch(hostname, patternHostname);
 			}
 		}
 		return false;
@@ -352,5 +350,22 @@ public class LilGUtil {
 		if (value == -1.0) return Double.NaN;
 		// returns a percentage value with 1 decimal point precision
 		return ((int) (value * 1000) / 10.0);
+	}
+
+	/**
+	 * Returns a list with all links contained in the input
+	 */
+	public static List<String> extractUrls(String text) {
+		List<String> containedUrls = new ArrayList<>();
+		String urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?+-=\\\\.&]*)";
+		Pattern pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE);
+		Matcher urlMatcher = pattern.matcher(text);
+
+		while (urlMatcher.find()) {
+			containedUrls.add(text.substring(urlMatcher.start(0),
+					urlMatcher.end(0)));
+		}
+
+		return containedUrls;
 	}
 }

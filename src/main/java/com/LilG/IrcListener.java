@@ -7,7 +7,6 @@ import com.LilG.Config.IRCChannelConfiguration;
 import com.LilG.utils.LilGUtil;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableSortedSet;
-import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.TextChannel;
 import org.pircbotx.Channel;
 import org.pircbotx.User;
@@ -25,6 +24,7 @@ import java.util.List;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
+import static com.LilG.utils.LilGUtil.matchHostMask;
 import static com.LilG.utils.LilGUtil.startsWithAny;
 
 /**
@@ -113,6 +113,7 @@ public class IrcListener extends ListenerAdapter {
 
 	@Override
 	public void onMessage(MessageEvent event) {
+		Skip:
 		try {
 			config().pircBotX = event.getBot();
 			String message = event.getMessage();
@@ -137,6 +138,17 @@ public class IrcListener extends ListenerAdapter {
 				);
 			} else {
 				if (!handleCommand(event)) {
+					if (configuration != null)
+						for (String hostmask : configuration.ignoreUserMessageIf.keySet()) {
+							for (User user : event.getChannel().getUsers()) {
+								if (matchHostMask(user.getHostmask(), hostmask)) {
+									if (message.contains(configuration.ignoreUserMessageIf.get(hostmask))) {
+										break Skip;
+									}
+								}
+							}
+						}
+
 					channel.sendMessage(
 							String.format("**<%s%s>** %s",
 									getUserSymbol(event),
@@ -260,7 +272,7 @@ public class IrcListener extends ListenerAdapter {
 	}
 
 	@Override
-	public void onNickChange(NickChangeEvent event) throws Exception {
+	public void onNickChange(NickChangeEvent event) {
 		//noinspection ConstantConditions
 		for (Channel channel : event.getUser().getChannels()) {
 			TextChannel textChannel = config().channelMapObj.inverse().get(channel);
@@ -297,13 +309,7 @@ public class IrcListener extends ListenerAdapter {
 		}
 		BiMap<String, String> ircDiscordChanMap = ((BiMap<String, String>) config().channelMapping).inverse();
 		for (Channel channel : config().pircBotX.getUserBot().getChannels()) {
-			for (Guild guild : config().jda.getGuilds()) {
-				for (TextChannel textChannel : guild.getTextChannels()) {
-					if (ircDiscordChanMap.get(channel.getName()).equals("#" + textChannel.getName())) {
-						config().channelMapObj.put(textChannel, channel);
-					}
-				}
-			}
+			config().channelMapObj.put(config().jda.getTextChannelById(ircDiscordChanMap.get(channel.getName())), channel);
 		}
 		LOGGER.info("Filled channel map");
 	}
