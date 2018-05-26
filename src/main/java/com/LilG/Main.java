@@ -37,7 +37,7 @@ public class Main {
 	private final static MultiBotManager manager = new MultiBotManager();
 	private final static File thisJar;
 	private final static long lastModified;
-	public final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	private final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	private static File configFile;
 	static long lastActivity = System.currentTimeMillis(); // activity as in people talking
 	static Configuration[] config;
@@ -134,6 +134,14 @@ public class Main {
 				LOGGER.trace("JDA built\n" + config.jda);
 			}
 			manager.start();
+			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+				manager.stop("Shutting down");
+				for (Configuration config : config) {
+					if (config.jda != null) {
+						config.jda.shutdown();
+					}
+				}
+			}));
 		} catch (JsonSyntaxException e) {
 			try (FileWriter emptyFile = new FileWriter(new File("EmptyConfig.json"))) {
 				LOGGER.error("Error reading config json", e);
@@ -176,7 +184,7 @@ public class Main {
 		}
 	}
 
-	public static void rehash() {
+	static void rehash() {
 		try (Reader reader = new FileReader(configFile)) {
 			Configuration[] configs = gson.fromJson(reader, Configuration[].class);
 			for (byte i = 0; i < configs.length; i++) {

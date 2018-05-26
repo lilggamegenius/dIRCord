@@ -40,279 +40,7 @@ class Bridge {
 		return Main.config[configID].channelMapObj.get(event.getChannel());
 	}
 
-	private static void handleCommand(String command, String[] args, Object eventObj, byte configID, boolean IRC) { // if IRC is true, then command called from IRC
-		switch (command.toLowerCase()) {
-			case "help": {
-				if (args.length > 0) {
-					switch (args[0].toLowerCase()) {
-						case "help": {
-							sendMessage(eventObj, ">_>", IRC);
-						}
-						break;
-						case "whois": {
-							sendMessage(eventObj, "This command tells you info about a user from the other side of the bridge. The only argument is the name of the user", IRC);
-						}
-						break;
-						case "ison": {
-							sendMessage(eventObj, "This command tells you if a user on the other side of the bridge is online. The only argument is the name of the user", IRC);
-						}
-						break;
-					}
-				} else {
-					sendMessage(eventObj, "Run of the mill help command, for help with a command, just use the command name as the argument. List of commands [whois, ison]", IRC);
-				}
-			}
-			return;
-			case "whois": {
-				if (args.length > 0) {
-					String name = argJoiner(args, 0);
-					if (IRC) {
-						MessageEvent event = (MessageEvent) eventObj;
-						List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
-						if (!members.isEmpty()) {
-							String nickname, username, ID, status, avatar, game, joinDate, registerDate, roles, permissions;
-							boolean streaming;
-							Member member = members.get(0);
-							nickname = member.getEffectiveName();
-							username = member.getUser().getName();
-							ID = member.getUser().getId();
-							status = member.getOnlineStatus().getKey();
-							if (status.equals("dnd")) {
-								status = "Do not disturb";
-							}
-							avatar = member.getUser().getAvatarUrl();
-							Game gameObj = member.getGame();
-							if (gameObj != null) {
-								streaming = gameObj.getType() != Game.GameType.DEFAULT;
-								game = streaming ? member.getGame().getName() : member.getGame().getUrl();
-							} else {
-								streaming = false;
-								game = "nothing";
-							}
-							joinDate = member.getJoinDate().toLocalDateTime().toString();
-							registerDate = member.getUser().getCreationTime().toLocalDateTime().toString();
-							StringBuilder rolesBuilder = new StringBuilder();
-							boolean first = true;
-							for (Role role : member.getRoles()) {
-								if (!first) {
-									rolesBuilder.append(", ");
-								} else {
-									first = false;
-								}
-								rolesBuilder.append(role.getName());
-							}
-							roles = rolesBuilder.toString();
-							StringBuilder permissionsBuilder = new StringBuilder();
-							first = true;
-							for (Permission permission : member.getPermissions()) {
-								if (!first) {
-									permissionsBuilder.append(", ");
-								} else {
-									first = false;
-								}
-								permissionsBuilder.append(permission.getName());
-							}
-							permissions = permissionsBuilder.toString();
-							event.respond(String.format("%s is %s!%s@%s   Status: %s   Currently %s %s",
-									name,
-									nickname,
-									username,
-									ID,
-									status,
-									streaming ? "streaming" : "playing",
-									game));
-							event.respond(String.format("Registered: %s   Joined: %s   Avatar: %s ",
-									registerDate,
-									joinDate,
-									avatar));
-							event.getUser().send().notice(String.format(
-									"Roles: [%s] Permissions: [%s]",
-									roles,
-									permissions
-							));
-						} else {
-							event.respond(String.format("No one with the name \"%s\" was found", name));
-						}
-					} else {
-						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-						String nick, username, hostname;
-						String hostmask, realName, awayMsg, server;
-						boolean away;
-						for (User user : getIRCChannel(configID, event).getUsers()) {
-							nick = user.getNick();
-							username = user.getLogin();
-							hostname = user.getHostname();
-							if (!(LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)))
-								continue;
-							realName = user.getRealName();
-							hostmask = user.getHostmask();
-							away = user.isAway();
-							awayMsg = user.getAwayMessage();
-							server = user.getServer();
-							StringBuilder channelsBuilder = new StringBuilder();
-							boolean first = true;
-							for (Channel channel : user.getChannels()) {
-								UserLevel userLevel = getUserLevel(channel.getUserLevels(user));
-								if (!first) {
-									channelsBuilder.append(", ");
-								}
-								if (userLevel == null) {
-									channelsBuilder.append(channel.getName());
-								} else {
-									channelsBuilder.append(userLevel.getSymbol()).append(channel.getName());
-								}
-								first = false;
-							}
-							sendMessage(eventObj, String.format(
-									"```\n" +
-											"%s is %s\n" +
-											"%1$s's real name: %s\n" +
-											"%s" +
-											"%1$s's channels: %s\n" +
-											"%1$s's server: %s\n" +
-											"```", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder.toString(), server
-							), IRC);
-							break;
-						}
-					}
-				} else {
-					sendMessage(eventObj, "Missing argument", IRC);
-				}
-			}
-			return;
-			case "ison": {
-				if (args.length > 0) {
-					String name = argJoiner(args, 0);
-					if (IRC) {
-						MessageEvent event = (MessageEvent) eventObj;
-						List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
-						if (!members.isEmpty()) {
-							String nickname;
-							Member member = members.get(0);
-							nickname = member.getEffectiveName();
-							boolean online = member.getOnlineStatus() != OnlineStatus.OFFLINE;
-							event.respond(String.format("%s is %s",
-									nickname,
-									online ? "online" : "offline"));
-						} else {
-							event.respond(String.format("No one with the name \"%s\" was found", name));
-						}
-					} else {
-						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-						String nick, username, hostname;
-						User user = null;
-						for (User curUser : getIRCChannel(configID, event).getUsers()) {
-							nick = curUser.getNick();
-							username = curUser.getLogin();
-							hostname = curUser.getHostname();
-							if (LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)) {
-								user = curUser;
-								break;
-							}
-						}
-						if (user != null) {
-							sendMessage(eventObj, user.getNick() + " Is online", IRC);
-						} else {
-							sendMessage(eventObj, name + " Is not online", IRC);
-						}
-					}
-				}
-			}
-			return;
-			case "topic": {
-				if (IRC) {
-					MessageEvent event = (MessageEvent) eventObj;
-					sendMessage(eventObj, String.format("Topic: \"%s\" set by %s at %s", event.getChannel().getTopic(), event.getChannel().getTopicSetter(), event.getChannel().getTopicTimestamp()), IRC);
-				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-					sendMessage(eventObj, String.format("Topic: %s", event.getChannel().getTopic()), IRC);
-				}
-			}
-			return;
-			case "rehash": {
-				if (IRC) {
-					MessageEvent event = (MessageEvent) eventObj;
-					if (checkPerm(configID, event)) {
-						Main.rehash();
-					}
-				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-					if (checkPerm(configID, event)) {
-						Main.rehash();
-					}
-				}
-			}return;
-			case "prune": {
-				TextChannel channel;
-				List<Message> messages;
-				String pattern = args[0];
-				String user = "*";
-				//String pruner;
-				if (IRC) {
-					MessageEvent event = (MessageEvent) eventObj;
-					if (checkPerm(configID, event)) {
-						channel = getDiscordChannel(configID, event);
-						//pruner = event.getUser().getNick();
-					} else {
-						return;
-					}
-				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-					if (checkPerm(configID, event)) {
-						channel = event.getChannel();
-						//pruner = event.getMember().getEffectiveName();
-					} else {
-						return;
-					}
-				}
-
-				messages = channel.getHistory().retrievePast(100).complete();
-				if(LilGUtil.equalsAnyIgnoreCase(pattern, "-u", "--user")){
-					if(args.length <3){
-						if(IRC){
-							((MessageEvent) eventObj).respond("Missing args");
-						} else {
-							channel.sendMessage("Missing args").queue();
-						}
-						return;
-					}
-					user = args[1];
-					pattern = args[2];
-				}
-
-				for(Message message : messages){
-					if(message.getMember() != channel.getGuild().getSelfMember()) continue;
-					if(LilGUtil.wildCardMatch(message.getContentStripped().replace(DiscordListener.zeroWidthSpace + "", ""),
-							"<*" + user + "> " + pattern)){
-						message.delete()/*.reason("Pruned by " + pruner + " on " + (IRC ? "IRC" : "Discord"))*/.queue();
-					}
-				}
-			} break;
-			case "ban": {
-				String name = argJoiner(args, 0);
-				if (IRC) {
-					MessageEvent event = (MessageEvent) eventObj;
-					if (!checkPerm(configID, event)) return;
-
-					Guild guild = getDiscordChannel(configID, event).getGuild();
-					List<Member> members = guild.getMembersByEffectiveName(name, true);
-					if (!members.isEmpty()) {
-						if (members.size() == 1) {
-							guild.getController().ban(members.get(0), 0, "Banned by " + event.getUserHostmask()).queue();
-						} else {
-							event.respond(String.format("Found multiple users: %s", members.toString()));
-						}
-					} else {
-						event.respond(String.format("No one with the name \"%s\" was found", name));
-					}
-				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-					if (!checkPerm(configID, event)) return;
-				}
-			}
-			break;
-		}
-	}
+	private static final Map<String, String> languages = initLangMap();
 
 	/* command template
 				if (IRC) {
@@ -322,12 +50,12 @@ class Bridge {
 				}
 	 */
 
-	static boolean checkPerm(byte configID, MessageEvent event) {
+	private static boolean checkPerm(byte configID, MessageEvent event) {
 		return event.getChannel().getUserLevels(event.getUser()) != null ||
 				LilGUtil.matchHostMask(event.getUserHostmask().getHostmask(), Main.config[configID].IRCBotOwnerHostmask);
 	}
 
-	static boolean checkPerm(byte configID, GuildMessageReceivedEvent event) {
+	private static boolean checkPerm(byte configID, GuildMessageReceivedEvent event) {
 		return event.getMember().hasPermission(Permission.ADMINISTRATOR) ||
 				event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID);
 	}
@@ -456,7 +184,7 @@ class Bridge {
 			Map<String, Member> names = new HashMap<>();
 			for (Member member : channel.getMembers()) {
 				names.put(member.getUser().getName(), member);
-				if(member.getNickname() != null){
+				if (member.getNickname() != null) {
 					names.put(member.getNickname(), member);
 				}
 			}
@@ -465,17 +193,17 @@ class Bridge {
 			String[] message = strToFormat.split(" ");
 			int score;
 			for (String aMessage : message) {
-				if(!aMessage.startsWith("@")) continue;
+				if (!aMessage.startsWith("@")) continue;
 				ExtractedResult result1 = FuzzySearch.extractOne(aMessage.substring(1), names.keySet());
 				score = result1.getScore();
-				score -= Math.abs(aMessage.replace(" ", "").length() - result1.getString().replace(" ", "").length())*4;
+				score -= Math.abs(aMessage.replace(" ", "").length() - result1.getString().replace(" ", "").length()) * 4;
 				LOGGER.debug(String.format("Found Name %s from %s with score %d. Mention %s",
 						result1.getString(),
 						aMessage,
 						score,
 						names.get(result1.getString()).getAsMention()
 				));
-				if(score < 75){
+				if (score < 75) {
 					LOGGER.debug("Ignoring mention");
 					continue;
 				}
@@ -508,6 +236,284 @@ class Bridge {
 		return strToFormat;
 	}
 
+	private static void handleCommand(String command, String[] args, Object eventObj, byte configID, boolean IRC) { // if IRC is true, then command called from IRC
+		switch (command.toLowerCase()) {
+			case "help": {
+				if (args.length > 0) {
+					switch (args[0].toLowerCase()) {
+						case "help": {
+							sendMessage(eventObj, ">_>", IRC);
+						}
+						break;
+						case "whois": {
+							sendMessage(eventObj, "This command tells you info about a user from the other side of the bridge. The only argument is the name of the user", IRC);
+						}
+						break;
+						case "ison": {
+							sendMessage(eventObj, "This command tells you if a user on the other side of the bridge is online. The only argument is the name of the user", IRC);
+						}
+						break;
+					}
+				} else {
+					sendMessage(eventObj, "Run of the mill help command, for help with a command, just use the command name as the argument. List of commands [whois, ison]", IRC);
+				}
+			}
+			return;
+			case "whois": {
+				if (args.length > 0) {
+					String name = argJoiner(args, 0);
+					if (IRC) {
+						MessageEvent event = (MessageEvent) eventObj;
+						if (event.getUser() == null) throw new NullPointerException("event.getUser()");
+						List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
+						if (!members.isEmpty()) {
+							String nickname, username, ID, status, avatar, game, joinDate, registerDate, roles, permissions;
+							boolean streaming;
+							Member member = members.get(0);
+							nickname = member.getEffectiveName();
+							username = member.getUser().getName();
+							ID = member.getUser().getId();
+							status = member.getOnlineStatus().getKey();
+							if (status.equals("dnd")) {
+								status = "Do not disturb";
+							}
+							avatar = member.getUser().getAvatarUrl();
+							Game gameObj = member.getGame();
+							if (gameObj != null) {
+								streaming = gameObj.getType() != Game.GameType.DEFAULT;
+								game = streaming ? member.getGame().getName() : member.getGame().getUrl();
+							} else {
+								streaming = false;
+								game = "nothing";
+							}
+							joinDate = member.getJoinDate().toLocalDateTime().toString();
+							registerDate = member.getUser().getCreationTime().toLocalDateTime().toString();
+							StringBuilder rolesBuilder = new StringBuilder();
+							boolean first = true;
+							for (Role role : member.getRoles()) {
+								if (!first) {
+									rolesBuilder.append(", ");
+								} else {
+									first = false;
+								}
+								rolesBuilder.append(role.getName());
+							}
+							roles = rolesBuilder.toString();
+							StringBuilder permissionsBuilder = new StringBuilder();
+							first = true;
+							for (Permission permission : member.getPermissions()) {
+								if (!first) {
+									permissionsBuilder.append(", ");
+								} else {
+									first = false;
+								}
+								permissionsBuilder.append(permission.getName());
+							}
+							permissions = permissionsBuilder.toString();
+							event.respond(String.format("%s is %s!%s@%s   Status: %s   Currently %s %s",
+									name,
+									nickname,
+									username,
+									ID,
+									status,
+									streaming ? "streaming" : "playing",
+									game));
+							event.respond(String.format("Registered: %s   Joined: %s   Avatar: %s ",
+									registerDate,
+									joinDate,
+									avatar));
+							event.getUser().send().notice(String.format(
+									"Roles: [%s] Permissions: [%s]",
+									roles,
+									permissions
+							));
+						} else {
+							event.respond(String.format("No one with the name \"%s\" was found", name));
+						}
+					} else {
+						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+						String nick, username, hostname;
+						String hostmask, realName, awayMsg, server;
+						boolean away;
+						for (User user : getIRCChannel(configID, event).getUsers()) {
+							nick = user.getNick();
+							username = user.getLogin();
+							hostname = user.getHostname();
+							if (!(LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)))
+								continue;
+							realName = user.getRealName();
+							hostmask = user.getHostmask();
+							away = user.isAway();
+							awayMsg = user.getAwayMessage();
+							server = user.getServer();
+							StringBuilder channelsBuilder = new StringBuilder();
+							boolean first = true;
+							for (Channel channel : user.getChannels()) {
+								UserLevel userLevel = getUserLevel(channel.getUserLevels(user));
+								if (!first) {
+									channelsBuilder.append(", ");
+								}
+								if (userLevel == null) {
+									channelsBuilder.append(channel.getName());
+								} else {
+									channelsBuilder.append(userLevel.getSymbol()).append(channel.getName());
+								}
+								first = false;
+							}
+							sendMessage(eventObj, String.format(
+									"```\n" +
+											"%s is %s\n" +
+											"%1$s's real name: %s\n" +
+											"%s" +
+											"%1$s's channels: %s\n" +
+											"%1$s's server: %s\n" +
+											"```", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder.toString(), server
+							), false);
+							break;
+						}
+					}
+				} else {
+					sendMessage(eventObj, "Missing argument", IRC);
+				}
+			}
+			return;
+			case "ison": {
+				if (args.length > 0) {
+					String name = argJoiner(args, 0);
+					if (IRC) {
+						MessageEvent event = (MessageEvent) eventObj;
+						List<Member> members = getDiscordChannel(configID, event).getGuild().getMembersByEffectiveName(name, true);
+						if (!members.isEmpty()) {
+							String nickname;
+							Member member = members.get(0);
+							nickname = member.getEffectiveName();
+							boolean online = member.getOnlineStatus() != OnlineStatus.OFFLINE;
+							event.respond(String.format("%s is %s",
+									nickname,
+									online ? "online" : "offline"));
+						} else {
+							event.respond(String.format("No one with the name \"%s\" was found", name));
+						}
+					} else {
+						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+						String nick, username, hostname;
+						User user = null;
+						for (User curUser : getIRCChannel(configID, event).getUsers()) {
+							nick = curUser.getNick();
+							username = curUser.getLogin();
+							hostname = curUser.getHostname();
+							if (LilGUtil.equalsAnyIgnoreCase(name, nick, username, hostname) || LilGUtil.startsWithAny(name, nick, username, hostname)) {
+								user = curUser;
+								break;
+							}
+						}
+						if (user != null) {
+							sendMessage(eventObj, user.getNick() + " Is online", false);
+						} else {
+							sendMessage(eventObj, name + " Is not online", false);
+						}
+					}
+				}
+			}
+			return;
+			case "topic": {
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					sendMessage(eventObj, String.format("Topic: \"%s\" set by %s at %s", event.getChannel().getTopic(), event.getChannel().getTopicSetter(), event.getChannel().getTopicTimestamp()), true);
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					sendMessage(eventObj, String.format("Topic: %s", event.getChannel().getTopic()), false);
+				}
+			}
+			return;
+			case "rehash": {
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					if (checkPerm(configID, event)) {
+						Main.rehash();
+						if (event.getUser() == null) throw new NullPointerException("event.getUser()");
+						event.getUser().send().notice("Rehash complete");
+					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					if (checkPerm(configID, event)) {
+						Main.rehash();
+						event.getAuthor().openPrivateChannel().queue(s -> s.sendMessage("Rehash complete").queue());
+					}
+				}
+			}return;
+			case "prune": {
+				TextChannel channel;
+				List<Message> messages;
+				String pattern = args[0];
+				String user = "*";
+				//String pruner;
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					if (checkPerm(configID, event)) {
+						channel = getDiscordChannel(configID, event);
+						//pruner = event.getUser().getNick();
+					} else {
+						return;
+					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					if (checkPerm(configID, event)) {
+						channel = event.getChannel();
+						//pruner = event.getMember().getEffectiveName();
+					} else {
+						return;
+					}
+				}
+
+				messages = channel.getHistory().retrievePast(100).complete();
+				if(LilGUtil.equalsAnyIgnoreCase(pattern, "-u", "--user")){
+					if(args.length <3){
+						if(IRC){
+							((MessageEvent) eventObj).respond("Missing args");
+						} else {
+							channel.sendMessage("Missing args").queue();
+						}
+						return;
+					}
+					user = args[1];
+					pattern = args[2];
+				}
+
+				for(Message message : messages){
+					if(message.getMember() != channel.getGuild().getSelfMember()) continue;
+					if(LilGUtil.wildCardMatch(message.getContentStripped().replace(DiscordListener.zeroWidthSpace + "", ""),
+							"<*" + user + "> " + pattern)){
+						message.delete()/*.reason("Pruned by " + pruner + " on " + (IRC ? "IRC" : "Discord"))*/.queue();
+					}
+				}
+			} break;
+			case "ban": {
+				String name = argJoiner(args, 0);
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					if (!checkPerm(configID, event)) return;
+
+					Guild guild = getDiscordChannel(configID, event).getGuild();
+					List<Member> members = guild.getMembersByEffectiveName(name, true);
+					if (!members.isEmpty()) {
+						if (members.size() == 1) {
+							guild.getController().ban(members.get(0), 0, "Banned by " + event.getUserHostmask()).queue();
+						} else {
+							event.respond(String.format("Found multiple users: %s", members.toString()));
+						}
+					} else {
+						event.respond(String.format("No one with the name \"%s\" was found", name));
+					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					if (!checkPerm(configID, event)) return;
+				}
+			}
+			break;
+		}
+	}
+
 	static String formatString(String message) {
 		final char underline = '\u001F';
 		final char italics = '\u001D';
@@ -527,37 +533,39 @@ class Bridge {
 
 		if (supportCodeBlocks) {
 			String[] codeblocks = StringUtils.substringsBetween(message, "```", "```");
-			String lang;
-			Gist gist = new Gist().setDescription("Discord code block");
-			Map<String, GistFile> files = new HashMap<>();
-
-			for (int i = 0; i < codeblocks.length; i++) {
-				lang = codeblocks[i].substring(0, codeblocks[i].indexOf('\n'));
-				GistFile file = new GistFile().setContent(codeblocks[i]);
-				if (lang.contains(" ")) {
-					files.put(String.format("Block%d.txt", i), file);
-				} else {
-					files.put(String.format("Block%d.%s", i, lang), file);
+			if (codeblocks != null) {
+				String lang;
+				Gist gist = new Gist().setDescription("Discord code block");
+				Map<String, GistFile> files = new HashMap<>();
+				for (int i = 0; i < codeblocks.length; i++) {
+					lang = codeblocks[i].substring(0, codeblocks[i].indexOf('\n'));
+					if (!lang.isEmpty() || languages.containsKey(lang)) {
+						GistFile file = new GistFile().setContent(codeblocks[i].replace(lang + "\n", ""));
+						files.put(String.format("Block%d.%s", i, languages.get(lang)), file);
+					} else {
+						GistFile file = new GistFile().setContent(codeblocks[i]);
+						files.put(String.format("Block%d.txt", i), file);
+					}
 				}
-			}
 
-			try {
-				gist.setFiles(files);
-				gist = new GistService(client).createGist(gist);
-				String url = gist.getHtmlUrl();
-				byte index = 0;
-				for (GistFile file : gist.getFiles().values()) {
-					message = message.replace(
-							String.format("```%s```", file.getContent()),
-							String.format("%s#file-block%d-%s", url, index++,
-									file.getFilename().substring(
-											file.getFilename().lastIndexOf('.')
-									)
-							)
-					);
+				try {
+					gist.setFiles(files);
+					gist = new GistService(client).createGist(gist);
+					String url = gist.getHtmlUrl();
+					byte index = 0;
+					for (GistFile file : gist.getFiles().values()) {
+						message = message.replace(
+								String.format("```%s```", codeblocks[index]),
+								String.format("%s#file-block%d-%s", url, index++,
+										file.getFilename().substring(
+												file.getFilename().lastIndexOf('.')
+										)
+								)
+						);
+					}
+				} catch (IOException e) {
+					LOGGER.error("Problem uploading gist", e);
 				}
-			} catch (IOException e) {
-				LOGGER.error("Problem uploading gist", e);
 			}
 		}
 
@@ -626,4 +634,14 @@ class Bridge {
 				.replace('\r', '␍');
 		return String.format(message, (Object[]) parts);
 	}
+
+	private static Map<String, String> initLangMap() {
+		Map<String, String> map = new HashMap<>();
+		map.put("java", "java");
+		map.put("cpp", "cpp");
+		map.put("c", "c");
+		map.put("csharp", "cs");
+		return map;
+	}
+
 }

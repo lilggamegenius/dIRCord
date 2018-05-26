@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
@@ -31,11 +32,11 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
  * Created by lil-g on 12/12/16.
  */
 public class DiscordListener extends ListenerAdapter {
-	public final static char colorCode = '\u0003';
-	public final static char zeroWidthSpace = '\u200B';
+	final static char zeroWidthSpace = '\u200B';
+	private final static char colorCode = '\u0003';
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
 	private final byte configID;
-	public volatile boolean ready;
+	private volatile boolean ready;
 
 	DiscordListener(byte configID) {
 		this.configID = configID;
@@ -284,7 +285,7 @@ public class DiscordListener extends ListenerAdapter {
 				event.getGuild().getController().setNickname(user, event.getPrevNick()).reason("Same nick as bridge bot").queue();
 			} else {
 				same = true;
-				event.getGuild().getDefaultChannel().sendMessage(String.format(
+				Objects.requireNonNull(event.getGuild().getDefaultChannel()).sendMessage(String.format(
 						"User %s!%s@%s has the same name as the bridge bot",
 						user.getEffectiveName(),
 						user.getUser().getName(),
@@ -322,14 +323,17 @@ public class DiscordListener extends ListenerAdapter {
 		for(String masksToBan : config().BanOnSight){
 			if(LilGUtil.matchHostMask(hostmask, masksToBan)){
 				event.getGuild().getController().ban(user, 0, "Ban On Sight: " + masksToBan).queue(s ->
-						textChannel2.sendMessage(String.format("User %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d->{
-							if(channel1 != null) {
-								channel1.send().message(String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
-										formatMember(user, user.getEffectiveName())
-										)
-								);
-							}
-						})
+						{
+							assert textChannel2 != null;
+							textChannel2.sendMessage(String.format("User %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d -> {
+								if (channel1 != null) {
+									channel1.send().message(String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
+											formatMember(user, user.getEffectiveName())
+											)
+									);
+								}
+							});
+						}
 				);
 				return;
 			}

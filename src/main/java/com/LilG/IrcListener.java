@@ -1,6 +1,5 @@
 package com.LilG;
 
-import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.LilG.Config.Configuration;
 import com.LilG.Config.IRCChannelConfiguration;
@@ -11,7 +10,6 @@ import net.dv8tion.jda.core.entities.TextChannel;
 import org.pircbotx.Channel;
 import org.pircbotx.User;
 import org.pircbotx.UserLevel;
-import org.pircbotx.hooks.Event;
 import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.WaitForQueue;
 import org.pircbotx.hooks.events.*;
@@ -21,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
@@ -33,25 +32,27 @@ import static com.LilG.utils.LilGUtil.startsWithAny;
 public class IrcListener extends ListenerAdapter {
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(IrcListener.class);
 	private final byte configID;
-	public volatile boolean ready;
+	private volatile boolean ready;
 
 	IrcListener(byte configID) {
 		this.configID = configID;
 	}
 
 	private static String getUserSymbol(MessageEvent event) {
-		return getUserSymbol(event, event.getChannel(), event.getUser());
+		return getUserSymbol(event.getChannel(), event.getUser());
 	}
 
 	public static String getUserSymbol(MessageEvent event, User user) {
-		return getUserSymbol(event, event.getChannel(), user);
+		return getUserSymbol(event.getChannel(), user);
 	}
 
 	public static String getUserSymbol(MessageEvent event, Channel channel) {
-		return getUserSymbol(event, channel, event.getUser());
+		return getUserSymbol(channel, event.getUser());
 	}
 
-	private static String getUserSymbol(MessageEvent event, Channel channel, User user) {
+	private static String getUserSymbol(Channel channel, User user) {
+		if (channel == null) throw new NullPointerException("Channel");
+		if (user == null) throw new NullPointerException("User");
 		ImmutableSortedSet<UserLevel> userLevels = user.getUserLevels(channel);
 		UserLevel topUserLevel = null;
 		for (UserLevel userLevel : userLevels) {
@@ -97,18 +98,13 @@ public class IrcListener extends ListenerAdapter {
 		return false;
 	}
 
-	@Override
-	public void onEvent(Event event) throws Exception {
-		super.onEvent(event);
-		fillChannelMap();
-	}
-
 	public void onConnect(ConnectEvent event) {
 		config().pircBotX = event.getBot();
 		for (String string : config().autoSendCommands) {
 			event.getBot().sendRaw().rawLine(string);
 		}
 		ready = true;
+		fillChannelMap();
 	}
 
 	@Override
@@ -131,7 +127,7 @@ public class IrcListener extends ListenerAdapter {
 				channel.sendMessage(
 						String.format("_Command Sent by_ `%s%s`",
 								getUserSymbol(event),
-								formatName(event.getUser(), true)
+								formatName(Objects.requireNonNull(event.getUser()), true)
 						)
 				).queue(
 						message1 -> finalChannel.sendMessage(formatString(finalChannel, message)).queue()
@@ -162,6 +158,7 @@ public class IrcListener extends ListenerAdapter {
 			LOGGER.error("Error in IrcListener\n", e);
 		}
 		Main.lastActivity = System.currentTimeMillis();
+		fillChannelMap();
 	}
 
 	public void onNotice(NoticeEvent event) {
@@ -173,6 +170,7 @@ public class IrcListener extends ListenerAdapter {
 		if (message.contains("\u0001AVATAR")) {
 			event.getUser().send().notice("\u0001AVATAR " + config().jda.getSelfUser().getAvatarUrl() + "\u0001");
 		}
+		fillChannelMap();
 	}
 
 	@Override
@@ -190,6 +188,7 @@ public class IrcListener extends ListenerAdapter {
 							"Joined"
 					)
 			).queue();
+		fillChannelMap();
 	}
 
 	@Override
@@ -202,6 +201,7 @@ public class IrcListener extends ListenerAdapter {
 							event.getReason()
 					)
 			).queue();
+		fillChannelMap();
 	}
 
 	@Override
@@ -213,6 +213,7 @@ public class IrcListener extends ListenerAdapter {
 						event.getReason()
 				)
 		).queue();
+		fillChannelMap();
 	}
 
 	@Override
@@ -223,6 +224,7 @@ public class IrcListener extends ListenerAdapter {
 						event.getMessage()
 				)
 		).queue();
+		fillChannelMap();
 	}
 
 	@Override
@@ -236,12 +238,11 @@ public class IrcListener extends ListenerAdapter {
 						"Set mode " + event.getMode()
 				)
 		).queue();
+		fillChannelMap();
 	}
 
 	@Override
 	public void onQuit(QuitEvent event) {
-		LOGGER.setLevel(Level.ALL);
-
 		for (Channel channel : event.getUser().getChannels()) {
 			IRCChannelConfiguration configuration = channelConfig(channel.getName());
 			if (!configuration.quits) continue;
@@ -255,6 +256,7 @@ public class IrcListener extends ListenerAdapter {
 					)
 			).queue();
 		}
+		fillChannelMap();
 	}
 
 	@Override
@@ -269,6 +271,7 @@ public class IrcListener extends ListenerAdapter {
 		} else {
 			channel.sendMessage(String.format("Current Topic: `%s` set by %s at %s", event.getTopic(), event.getUser().getHostmask(), formattedTime)).queue();
 		}
+		fillChannelMap();
 	}
 
 	@Override
@@ -293,6 +296,7 @@ public class IrcListener extends ListenerAdapter {
 					)
 			).queue();
 		}
+		fillChannelMap();
 	}
 
 	private TextChannel getDiscordChannel(GenericChannelEvent event) {
@@ -314,7 +318,7 @@ public class IrcListener extends ListenerAdapter {
 		LOGGER.info("Filled channel map");
 	}
 
-	public void getSpamList(final Channel channel) {
+	private void getSpamList(final Channel channel) {
 		new Thread(() -> {
 			WaitForQueue queue = new WaitForQueue(channel.getBot());
 			//Infinite loop since we might recieve messages that aren't WaitTest's.
