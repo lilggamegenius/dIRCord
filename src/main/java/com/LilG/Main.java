@@ -8,18 +8,21 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import net.dv8tion.jda.core.AccountType;
+import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.JDABuilder;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.TextChannel;
 import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.MultiBotManager;
 import org.pircbotx.UtilSSLSocketFactory;
+import org.pircbotx.delay.Delay;
+import org.pircbotx.delay.StaticDelay;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +36,7 @@ public class Main {
 	private final static String kvircFlags = "\u00034\u000F";
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Main.class);
 	private final static int attempts = 10;
-	private final static int connectDelay = 15 * 1000;
+	private final static Delay connectDelay = new StaticDelay(15 * 1000);
 	private final static MultiBotManager manager = new MultiBotManager();
 	private final static File thisJar;
 	private final static long lastModified;
@@ -58,8 +61,9 @@ public class Main {
 		lastModified = lastModified_;
 	}
 
-	public static void main(String args[]) {
+	public static void main(String[] args) {
 		LOGGER.setLevel(Level.ALL);
+		LOGGER.debug("dIRCord starting");
 		new Thread(() -> {
 			try {
 				LOGGER.trace("Starting updater thread");
@@ -89,20 +93,21 @@ public class Main {
 				LOGGER.error("Config file is empty");
 				System.exit(-1);
 			}
+			Map<String, JDA> jdaMap = new HashMap<>();
 			for (byte i = 0; i < config.length; i++) {
 				Configuration config = Main.config[i];
 				config.channelMapping = HashBiMap.create(config.channelMapping);
 				org.pircbotx.Configuration ircConfig;
 				org.pircbotx.Configuration.Builder configBuilder = new org.pircbotx.Configuration.Builder()
 						.setAutoReconnectDelay(connectDelay)
-						.setEncoding(Charset.forName("UTF-8"))
+						.setEncoding(StandardCharsets.UTF_8)
 						.setAutoReconnect(true)
 						.setAutoReconnectAttempts(attempts)
 						.setName(config.nickname) //Set the nick of the bot.
 						.setLogin(config.userName)
 						.setAutoSplitMessage(config.autoSplitMessage)
 						.setRealName(kvircFlags + config.realName);
-				if(StringUtils.isNotBlank(config.nickservPassword)){
+				if (StringUtils.isNotBlank(config.nickservPassword)) {
 					configBuilder.setNickservPassword(config.nickservPassword);
 				}
 				for (String channel : config.channelMapping.values()) {
@@ -114,7 +119,7 @@ public class Main {
 					}
 				}
 				if (config.floodProtection) {
-					configBuilder.setMessageDelay(config.floodProtectionDelay);
+					configBuilder.setMessageDelay(config.floodProtectionDelayObj);
 				}
 				if (config.SSL) {
 					configBuilder.setSocketFactory(new UtilSSLSocketFactory().trustAllCertificates());
@@ -124,14 +129,22 @@ public class Main {
 				ircConfig = configBuilder.addListener(config.ircListener).buildForServer(config.server, config.port);
 				manager.addBot(ircConfig);
 				String token = config.discordToken;
-				LOGGER.trace("Calling JDA Builder with token: " + token);
-				config.jda = new JDABuilder(AccountType.BOT)
-						.setToken(token)
-						.setAutoReconnect(true)
-						.setEnableShutdownHook(true)
-						.addEventListener(config.discordListener)
-						.buildBlocking();
-				LOGGER.trace("JDA built\n" + config.jda);
+				if (!jdaMap.containsKey(token)) {
+					LOGGER.trace("Calling JDA Builder with token: " + token);
+					config.jda = new JDABuilder(AccountType.BOT)
+							.setToken(token)
+							.setAutoReconnect(true)
+							.setEnableShutdownHook(true)
+							.addEventListener(config.discordListener)
+							.build()
+							.awaitReady();
+					LOGGER.trace("JDA built\n" + config.jda);
+					jdaMap.put(token, config.jda);
+				} else {
+					LOGGER.trace("Using existing JDA with token: " + token);
+					config.jda = jdaMap.get(token);
+					config.jda.addEventListener(config.discordListener);
+				}
 			}
 			manager.start();
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -155,7 +168,7 @@ public class Main {
 
 	}
 
-	private static void checkForNewBuild(String args[]) throws IOException {
+	private static void checkForNewBuild(String[] args) throws IOException {
 		if (Thread.holdsLock(kvircFlags)) return;
 		synchronized (kvircFlags) {
 			File newJar = new File(thisJar.getParent(), thisJar.getName() + ".new");
@@ -222,9 +235,9 @@ public class Main {
 				}
 				for (int index = 0; index < channelsToJoin.size(); index++) {
 					if (channelsToJoinKeys.get(index) != null) {
-						Main.config[i].pircBotX.send().joinChannel(channelsToJoin.get(index), channelsToJoinKeys.get(index));
+						Main.config[i].pircBotX.sendIRC().joinChannel(channelsToJoin.get(index), channelsToJoinKeys.get(index));
 					} else {
-						Main.config[i].pircBotX.send().joinChannel(channelsToJoin.get(index));
+						Main.config[i].pircBotX.sendIRC().joinChannel(channelsToJoin.get(index));
 					}
 				}
 			}

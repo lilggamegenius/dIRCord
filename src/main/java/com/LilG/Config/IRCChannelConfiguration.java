@@ -9,6 +9,8 @@ public class IRCChannelConfiguration implements ChannelConfiguration {
 	public final boolean joins;
 	public final boolean quits;
 	public final boolean parts;
+	public final boolean modes;
+	public final boolean nicks;
 	public final String[] commandCharacters;
 	public final Map<String, String> ignoreUserMessageIf;
 	public transient final List<String> spamFilterList;
@@ -17,6 +19,8 @@ public class IRCChannelConfiguration implements ChannelConfiguration {
 		joins = true;
 		quits = true;
 		parts = true;
+		modes = true;
+		nicks = true;
 		commandCharacters = new String[0];
 		ignoreUserMessageIf = new HashMap<>();
 		spamFilterList = new ArrayList<>();

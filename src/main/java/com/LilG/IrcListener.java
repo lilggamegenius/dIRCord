@@ -119,7 +119,8 @@ public class IrcListener extends ListenerAdapter {
 					event.respond("Failed sending message to discord" + errorMsg);
 					return;
 				}
-				channel = getDiscordChannel(event);
+				Thread.sleep(1000);
+				channel = getDiscordChannel(event, true);
 			}
 			IRCChannelConfiguration configuration = channelConfig(event);
 			if (configuration != null && startsWithAny(message, configuration.getCommmandCharacters())) {
@@ -158,7 +159,7 @@ public class IrcListener extends ListenerAdapter {
 			LOGGER.error("Error in IrcListener\n", e);
 		}
 		Main.lastActivity = System.currentTimeMillis();
-		fillChannelMap();
+		//fillChannelMap();
 	}
 
 	public void onNotice(NoticeEvent event) {
@@ -170,7 +171,7 @@ public class IrcListener extends ListenerAdapter {
 		if (message.contains("\u0001AVATAR")) {
 			event.getUser().send().notice("\u0001AVATAR " + config().jda.getSelfUser().getAvatarUrl() + "\u0001");
 		}
-		fillChannelMap();
+		//fillChannelMap();
 	}
 
 	@Override
@@ -224,7 +225,7 @@ public class IrcListener extends ListenerAdapter {
 						event.getMessage()
 				)
 		).queue();
-		fillChannelMap();
+		//fillChannelMap();
 	}
 
 	@Override
@@ -232,13 +233,16 @@ public class IrcListener extends ListenerAdapter {
 		if (event.getMode().contains("g")) {
 			getSpamList(event.getChannel());
 		}
-		getDiscordChannel(event).sendMessage(
-				String.format("**\\*%s\\*** _%s_",
-						formatName(event.getUser()),
-						"Set mode " + event.getMode()
-				)
-		).queue();
-		fillChannelMap();
+		IRCChannelConfiguration configuration = channelConfig(event.getChannel().getName());
+		if (configuration.modes) {
+			getDiscordChannel(event).sendMessage(
+					String.format("**\\*%s\\*** _%s_",
+							formatName(event.getUser()),
+							"Set mode " + event.getMode()
+					)
+			).queue();
+		}
+		//fillChannelMap();
 	}
 
 	@Override
@@ -271,13 +275,15 @@ public class IrcListener extends ListenerAdapter {
 		} else {
 			channel.sendMessage(String.format("Current Topic: `%s` set by %s at %s", event.getTopic(), event.getUser().getHostmask(), formattedTime)).queue();
 		}
-		fillChannelMap();
+		//fillChannelMap();
 	}
 
 	@Override
 	public void onNickChange(NickChangeEvent event) {
 		//noinspection ConstantConditions
 		for (Channel channel : event.getUser().getChannels()) {
+			IRCChannelConfiguration configuration = channelConfig(channel.getName());
+			if (!configuration.nicks) continue;
 			TextChannel textChannel = config().channelMapObj.inverse().get(channel);
 			if (textChannel == null) {
 				continue;
@@ -296,15 +302,22 @@ public class IrcListener extends ListenerAdapter {
 					)
 			).queue();
 		}
-		fillChannelMap();
+		//fillChannelMap();
 	}
 
 	private TextChannel getDiscordChannel(GenericChannelEvent event) {
+		return getDiscordChannel(event, false);
+	}
+
+	private TextChannel getDiscordChannel(GenericChannelEvent event, boolean forceFill) {
+		if (forceFill || config().channelMapObj.isEmpty()) fillChannelMap();
 		return config().channelMapObj.inverse().get(event.getChannel());
 	}
 
 	void fillChannelMap() {
-		if (config().pircBotX == null || config().pircBotX.getUserBot().getChannels().size() == 0 || !ready) {
+		if (config().pircBotX == null ||
+				config().pircBotX.getUserBot().getChannels().size() == 0 ||
+				!ready) {
 			return;
 		}
 		if (config().jda == null) {
@@ -313,7 +326,13 @@ public class IrcListener extends ListenerAdapter {
 		}
 		BiMap<String, String> ircDiscordChanMap = ((BiMap<String, String>) config().channelMapping).inverse();
 		for (Channel channel : config().pircBotX.getUserBot().getChannels()) {
-			config().channelMapObj.put(config().jda.getTextChannelById(ircDiscordChanMap.get(channel.getName())), channel);
+			config().channelMapObj.put(
+					config().jda.getTextChannelById(
+							ircDiscordChanMap.get(
+									channel.getName()
+							)
+					), channel
+			);
 		}
 		LOGGER.info("Filled channel map");
 	}

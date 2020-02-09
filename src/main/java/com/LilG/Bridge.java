@@ -31,6 +31,7 @@ import java.util.Map;
 class Bridge {
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(Bridge.class);
 	private static final String escapePrefix = "@!";
+	private static final Map<String, String> languages = initLangMap();
 
 	private static TextChannel getDiscordChannel(byte configID, MessageEvent event) {
 		return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
@@ -40,28 +41,32 @@ class Bridge {
 		return Main.config[configID].channelMapObj.get(event.getChannel());
 	}
 
-	private static final Map<String, String> languages = initLangMap();
-
-	/* command template
-				if (IRC) {
-					MessageEvent event = (MessageEvent) eventObj;
-				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-				}
-	 */
-
 	private static boolean checkPerm(byte configID, MessageEvent event) {
-		return event.getChannel().getUserLevels(event.getUser()) != null ||
-				LilGUtil.matchHostMask(event.getUserHostmask().getHostmask(), Main.config[configID].IRCBotOwnerHostmask);
+		return checkPerm(configID, event, UserLevel.HALFOP);
 	}
 
 	private static boolean checkPerm(byte configID, GuildMessageReceivedEvent event) {
-		return event.getMember().hasPermission(Permission.ADMINISTRATOR) ||
-				event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID);
+		return checkPerm(configID, event, Permission.MESSAGE_MANAGE);
+	}
+
+	private static boolean checkPerm(byte configID, MessageEvent event, UserLevel userLevelToCheck) {
+		if (LilGUtil.matchHostMask(event.getUserHostmask().getHostmask(), Main.config[configID].IRCBotOwnerHostmask)) {
+			//return true;
+		}
+		UserLevel userLevel = getUserLevel(event.getChannel().getUserLevels(event.getUser()));
+		return userLevel.ordinal() >= userLevelToCheck.ordinal();
+	}
+
+	private static boolean checkPerm(byte configID, GuildMessageReceivedEvent event, Permission permission) {
+		if (event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID)) {
+			//return true;
+		}
+		return event.getMember().hasPermission(permission);
 	}
 
 	static void handleCommand(String[] message, Object event, byte configID, boolean IRC) {
-		String command, args[] = {};
+		String command;
+		String[] args = {};
 		command = message[1];
 		if (message.length > 2) {
 			args = new String[message.length - 2];
@@ -118,14 +123,14 @@ class Bridge {
 
 	private static UserLevel getUserLevel(ImmutableSortedSet<UserLevel> levels) {
 		int ret = 0;
-		if (levels.isEmpty()) {
+		if (levels == null || levels.isEmpty()) {
 			return null;
-		} else {
-			for (UserLevel level : levels) {
-				int levelNum = level.ordinal();
-				ret = ret < levelNum ? levelNum : ret;
-			}
 		}
+		for (UserLevel level : levels) {
+			int levelNum = level.ordinal();
+			ret = Math.max(ret, levelNum);
+		}
+
 		if (ret == 0) {
 			return null;
 		}
@@ -441,7 +446,8 @@ class Bridge {
 						event.getAuthor().openPrivateChannel().queue(s -> s.sendMessage("Rehash complete").queue());
 					}
 				}
-			}return;
+			}
+			return;
 			case "prune": {
 				TextChannel channel;
 				List<Message> messages;
@@ -467,9 +473,9 @@ class Bridge {
 				}
 
 				messages = channel.getHistory().retrievePast(100).complete();
-				if(LilGUtil.equalsAnyIgnoreCase(pattern, "-u", "--user")){
-					if(args.length <3){
-						if(IRC){
+				if (LilGUtil.equalsAnyIgnoreCase(pattern, "-u", "--user")) {
+					if (args.length < 3) {
+						if (IRC) {
 							((MessageEvent) eventObj).respond("Missing args");
 						} else {
 							channel.sendMessage("Missing args").queue();
@@ -480,14 +486,15 @@ class Bridge {
 					pattern = args[2];
 				}
 
-				for(Message message : messages){
-					if(message.getMember() != channel.getGuild().getSelfMember()) continue;
-					if(LilGUtil.wildCardMatch(message.getContentStripped().replace(DiscordListener.zeroWidthSpace + "", ""),
-							"<*" + user + "> " + pattern)){
+				for (Message message : messages) {
+					if (message.getMember() != channel.getGuild().getSelfMember()) continue;
+					if (LilGUtil.wildCardMatch(message.getContentStripped().replace(DiscordListener.zeroWidthSpace + "", ""),
+							"<*" + user + "> " + pattern)) {
 						message.delete()/*.reason("Pruned by " + pruner + " on " + (IRC ? "IRC" : "Discord"))*/.queue();
 					}
 				}
-			} break;
+			}
+			break;
 			case "ban": {
 				String name = argJoiner(args, 0);
 				if (IRC) {
@@ -511,8 +518,28 @@ class Bridge {
 				}
 			}
 			break;
+			case "permission": {
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+					UserLevel userLevel = getUserLevel(event.getUser().getUserLevels(event.getChannel()));
+					for (UserLevel level : UserLevel.values()) {
+
+					}
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+				}
+			}
+			break;
 		}
 	}
+
+	/* command template
+				if (IRC) {
+					MessageEvent event = (MessageEvent) eventObj;
+				} else {
+					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+				}
+	 */
 
 	static String formatString(String message) {
 		final char underline = '\u001F';
@@ -534,16 +561,21 @@ class Bridge {
 		if (supportCodeBlocks) {
 			String[] codeblocks = StringUtils.substringsBetween(message, "```", "```");
 			if (codeblocks != null) {
-				String lang;
+				String lang = "";
 				Gist gist = new Gist().setDescription("Discord code block");
 				Map<String, GistFile> files = new HashMap<>();
 				for (int i = 0; i < codeblocks.length; i++) {
-					lang = codeblocks[i].substring(0, codeblocks[i].indexOf('\n'));
-					if (!lang.isEmpty() || languages.containsKey(lang)) {
-						GistFile file = new GistFile().setContent(codeblocks[i].replace(lang + "\n", ""));
+					final String codeblock = codeblocks[i];
+					int newlinePos = 0;
+					if (codeblock.contains("\n")) {
+						newlinePos = codeblock.indexOf('\n');
+						lang = codeblock.substring(0, newlinePos);
+					}
+					if (languages.containsKey(lang.toLowerCase())) {
+						GistFile file = new GistFile().setContent(codeblock.substring(newlinePos + 1));
 						files.put(String.format("Block%d.%s", i, languages.get(lang)), file);
 					} else {
-						GistFile file = new GistFile().setContent(codeblocks[i]);
+						GistFile file = new GistFile().setContent(codeblock);
 						files.put(String.format("Block%d.txt", i), file);
 					}
 				}
@@ -629,10 +661,10 @@ class Bridge {
 			}
 		}
 		message = message
-				.replace('\u0007', '␇')
-				.replace("\n", " ␤")
-				.replace('\r', '␍');
-		return String.format(message, (Object[]) parts);
+				.replace('\u0007', '\u2407')
+				.replace("\n", " \u2424")
+				.replace('\r', '\u240d');
+		return String.format(message, parts);
 	}
 
 	private static Map<String, String> initLangMap() {
@@ -641,6 +673,7 @@ class Bridge {
 		map.put("cpp", "cpp");
 		map.put("c", "c");
 		map.put("csharp", "cs");
+		map.put("d", "d");
 		return map;
 	}
 

@@ -1,9 +1,11 @@
 <component name="libraryTable">
   <library name="Gradle: com.github.TheLQ:pircbotx:master-SNAPSHOT">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/b09e3472df4936440fd607b914a7e675af7fe6d1/pircbotx-master-SNAPSHOT.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/6e9a6ea5c931a45d783ab4a5976299f84156de64/pircbotx-master-SNAPSHOT.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/17fc238952aa2200dfbfc8bb15f2ce33c3ee2f8a/pircbotx-master-SNAPSHOT-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>

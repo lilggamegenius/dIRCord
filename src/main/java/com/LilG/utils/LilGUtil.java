@@ -1,8 +1,8 @@
 package com.LilG.utils;
 
 import ch.qos.logback.classic.Logger;
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 

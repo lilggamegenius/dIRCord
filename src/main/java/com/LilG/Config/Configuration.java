@@ -7,6 +7,8 @@ import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.entities.TextChannel;
 import org.pircbotx.Channel;
 import org.pircbotx.PircBotX;
+import org.pircbotx.delay.Delay;
+import org.pircbotx.delay.StaticDelay;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,6 +49,7 @@ public class Configuration {
 	public List<String> BanOnSight = new ArrayList<>();
 
 	public transient HashBiMap<TextChannel, Channel> channelMapObj = HashBiMap.create();
+	public transient Delay floodProtectionDelayObj = new StaticDelay(floodProtectionDelay);
 	public transient IrcListener ircListener;
 	public transient DiscordListener discordListener;
 	public transient PircBotX pircBotX;
