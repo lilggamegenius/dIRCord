@@ -13,6 +13,7 @@ import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.channel.text.GenericTextChannelEvent;
 import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateTopicEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberJoinEvent;
+import net.dv8tion.jda.core.events.guild.member.GuildMemberLeaveEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
@@ -20,6 +21,7 @@ import org.pircbotx.Channel;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -340,36 +342,69 @@ public class DiscordListener extends ListenerAdapter {
 		}
 	}
 
-	public void onGuildMemberJoin(GuildMemberJoinEvent event){
+	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
 		Member user = event.getMember();
-		Channel channel = null;
-		TextChannel textChannel = null;
-		for (TextChannel textChannel2 : event.getGuild().getTextChannels()) {
-			channel = config().channelMapObj.get(textChannel2);
-			textChannel = textChannel2;
-			if (channel != null) {
-				break;
+		List<Channel> channels = new ArrayList<>();
+		List<TextChannel> textChannels = new ArrayList<>();
+		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
+			Channel tempChannel = config().channelMapObj.get(textChannel);
+			if (tempChannel != null) {
+				textChannels.add(textChannel);
+				channels.add(tempChannel);
 			}
 		}
-		if (channel == null) {
+		if (channels.isEmpty()) {
 			return;
 		}
-		final Channel channel1 = channel;
-		final TextChannel textChannel1 = textChannel;
+		final Channel channel1 = channels.get(0);
+		final TextChannel textChannel = textChannels.get(0);
 		String hostmask = user.getEffectiveName() + "!" + user.getUser().getName() + "@" + user.getUser().getId();
-		for(String masksToBan : config().BanOnSight){
-			if(LilGUtil.matchHostMask(hostmask, masksToBan)){
+		String formattedName = formatMember(user, user.getEffectiveName());
+		for (String masksToBan : config().BanOnSight) {
+			if (LilGUtil.matchHostMask(hostmask, masksToBan)) {
 				event.getGuild().getController().ban(user, 0, "Ban On Sight: " + masksToBan).queue(s ->
-						textChannel1.sendMessage(String.format("Joining user %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d->
+						textChannel.sendMessage(String.format("Joining user %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d ->
 								channel1.send().message(
 										String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
-											formatMember(user, user.getEffectiveName())
+												formattedName
 										)
 								)
 						)
 				);
 				return;
 			}
+		}
+		for (int i = 0; i < textChannels.size(); i++) {
+			channels.get(i).send().message(String.format("%s [%s] has Joined #%s",
+					formattedName,
+					user.getUser().getId(),
+					textChannels.get(i).getName()
+			));
+		}
+	}
+
+	@Override
+	public void onGuildMemberLeave(GuildMemberLeaveEvent event) {
+		Member user = event.getMember();
+		List<Channel> channels = new ArrayList<>();
+		List<TextChannel> textChannels = new ArrayList<>();
+		for (TextChannel textChannel : event.getGuild().getTextChannels()) {
+			Channel tempChannel = config().channelMapObj.get(textChannel);
+			if (tempChannel != null) {
+				textChannels.add(textChannel);
+				channels.add(tempChannel);
+			}
+		}
+		if (channels.isEmpty()) {
+			return;
+		}
+		String formattedName = formatMember(user, user.getEffectiveName());
+		for (int i = 0; i < textChannels.size(); i++) {
+			channels.get(i).send().message(String.format("%s [%s] has Quit %s",
+					formattedName,
+					user.getUser().getId(),
+					event.getGuild().getName()
+			));
 		}
 	}
 
