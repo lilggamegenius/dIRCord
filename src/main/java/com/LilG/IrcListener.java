@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
@@ -114,6 +113,8 @@ public class IrcListener extends ListenerAdapter {
 			config().pircBotX = event.getBot();
 			String message = event.getMessage();
 			TextChannel channel = getDiscordChannel(event);
+			User user = event.getUser();
+			if (user == null) break Skip;
 			for (int tries = 0; channel == null; tries++) {
 				if (tries > 10) {
 					event.respond("Failed sending message to discord" + errorMsg);
@@ -128,28 +129,27 @@ public class IrcListener extends ListenerAdapter {
 				channel.sendMessage(
 						String.format("_Command Sent by_ `%s%s`",
 								getUserSymbol(event),
-								formatName(Objects.requireNonNull(event.getUser()), true)
+								formatName(user, true)
 						)
 				).queue(
 						message1 -> finalChannel.sendMessage(formatString(finalChannel, message)).queue()
 				);
 			} else {
 				if (!handleCommand(event)) {
-					if (configuration != null)
+					if (configuration != null) {
 						for (String hostmask : configuration.ignoreUserMessageIf.keySet()) {
-							for (User user : event.getChannel().getUsers()) {
-								if (matchHostMask(user.getHostmask(), hostmask)) {
-									if (message.contains(configuration.ignoreUserMessageIf.get(hostmask))) {
-										break Skip;
-									}
+							if (matchHostMask(user.getHostmask(), hostmask)) {
+								if (message.contains(configuration.ignoreUserMessageIf.get(hostmask))) {
+									break Skip;
 								}
 							}
 						}
+					}
 
 					channel.sendMessage(
 							String.format("**<%s%s>** %s",
 									getUserSymbol(event),
-									formatName(event.getUser()),
+									formatName(user),
 									formatString(channel, message)
 							)
 					).queue();
@@ -163,12 +163,10 @@ public class IrcListener extends ListenerAdapter {
 
 	public void onNotice(NoticeEvent event) {
 		String message = event.getMessage();
-		//noinspection ConstantConditions
-		if (event.getUser() == null) {
-			return;
-		}
+		User user = event.getUser();
+		if (user == null) return;
 		if (message.contains("\u0001AVATAR")) {
-			event.getUser().send().notice("\u0001AVATAR " + config().jda.getSelfUser().getAvatarUrl() + "\u0001");
+			user.send().notice("\u0001AVATAR " + config().jda.getSelfUser().getAvatarUrl() + "\u0001");
 		}
 		//fillChannelMap();
 	}
@@ -246,13 +244,14 @@ public class IrcListener extends ListenerAdapter {
 
 	@Override
 	public void onQuit(QuitEvent event) {
-		for (Channel channel : event.getUser().getChannels()) {
+		User user = event.getUser();
+		for (Channel channel : user.getChannels()) {
 			IRCChannelConfiguration configuration = channelConfig(channel.getName());
 			if (!configuration.quits) continue;
 			TextChannel textChannel = config().channelMapObj.inverse().get(channel);
 			textChannel.sendMessage(
 					String.format("**\\*%s\\*** _%s_",
-							formatName(event.getUser()),
+							formatName(user),
 							"has quit: " + event.getReason()
 									.replace("http://www.mibbit.com", "<http://www.mibbit.com>")
 									.replace("http://www.androirc.com/", "<http://www.androirc.com/>")
@@ -279,8 +278,9 @@ public class IrcListener extends ListenerAdapter {
 
 	@Override
 	public void onNickChange(NickChangeEvent event) {
+		User user = event.getUser();
 		//noinspection ConstantConditions
-		for (Channel channel : event.getUser().getChannels()) {
+		for (Channel channel : user.getChannels()) {
 			IRCChannelConfiguration configuration = channelConfig(channel.getName());
 			if (!configuration.nicks) continue;
 			TextChannel textChannel = config().channelMapObj.inverse().get(channel);
@@ -290,7 +290,7 @@ public class IrcListener extends ListenerAdapter {
 			String oldNick, newNick;
 			oldNick = event.getOldNick();
 			newNick = event.getNewNick();
-			if (event.getUser().isIrcop()) {
+			if (user.isIrcop()) {
 				oldNick = "__" + oldNick + "__";
 				newNick = "__" + newNick + "__";
 			}

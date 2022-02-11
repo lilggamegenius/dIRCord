@@ -221,8 +221,9 @@ public class LilGUtil {
 		return false;
 	}
 
-	public static boolean startsWithAny(@NotNull String check, @NotNull String... equal) {
+	public static boolean startsWithAny(@NotNull String check, String... equal) {
 		for (String aEqual : equal) {
+			if (aEqual == null) continue; // IRC Lib sometimes returns null info?? wtf
 			if (check.startsWith(aEqual)) {
 				return true;
 			}
@@ -278,17 +279,20 @@ public class LilGUtil {
 	}
 
 	public static boolean matchHostMask(@NotNull String hostmask, @NotNull String pattern) {
-		String nick = hostmask.substring(0, hostmask.indexOf("!"));
-		String userName = hostmask.substring(hostmask.indexOf("!") + 1, hostmask.indexOf("@"));
-		String hostname = hostmask.substring(hostmask.indexOf("@") + 1);
+		try {
+			String nick = hostmask.substring(0, hostmask.indexOf("!"));
+			String userName = hostmask.substring(hostmask.indexOf("!") + 1, hostmask.indexOf("@"));
+			String hostname = hostmask.substring(hostmask.indexOf("@") + 1);
 
-		String patternNick = pattern.substring(0, pattern.indexOf("!"));
-		String patternUserName = pattern.substring(pattern.indexOf("!") + 1, pattern.indexOf("@"));
-		String patternHostname = pattern.substring(pattern.indexOf("@") + 1);
-		if (wildCardMatch(nick, patternNick)) {
-			if (wildCardMatch(userName, patternUserName)) {
-				return wildCardMatch(hostname, patternHostname);
+			String patternNick = pattern.substring(0, pattern.indexOf("!"));
+			String patternUserName = pattern.substring(pattern.indexOf("!") + 1, pattern.indexOf("@"));
+			String patternHostname = pattern.substring(pattern.indexOf("@") + 1);
+			if (wildCardMatch(nick, patternNick)) {
+				if (wildCardMatch(userName, patternUserName)) {
+					return wildCardMatch(hostname, patternHostname);
+				}
 			}
+		} catch (StringIndexOutOfBoundsException ignored) {
 		}
 		return false;
 	}

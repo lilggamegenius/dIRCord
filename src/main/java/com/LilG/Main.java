@@ -61,24 +61,27 @@ public class Main {
 		lastModified = lastModified_;
 	}
 
+	public static void Updater(Thread t, String[] args) {
+		try {
+			LOGGER.trace("Starting updater thread");
+			while (!t.isInterrupted()) {
+				t.wait(60 * 1000);
+				if (Main.lastActivity + 1000 * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
+					LOGGER.trace("Checking for new build");
+					Main.checkForNewBuild(args);
+				}
+			}
+		} catch (InterruptedException ignored) {
+		} catch (Exception e) {
+			LOGGER.error("Error in update thread", e);
+		}
+	}
+
 	public static void main(String[] args) {
 		LOGGER.setLevel(Level.ALL);
 		LOGGER.debug("dIRCord starting");
-		new Thread(() -> {
-			try {
-				LOGGER.trace("Starting updater thread");
-				while (!Thread.currentThread().isInterrupted()) {
-					Thread.sleep(60 * 1000);
-					if (Main.lastActivity + 1000 * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
-						LOGGER.trace("Checking for new build");
-						Main.checkForNewBuild(args);
-					}
-				}
-			} catch (InterruptedException ignored) {
-			} catch (Exception e) {
-				LOGGER.error("Error in update thread", e);
-			}
-		}).start();
+		final Thread curThread = new Thread();
+		curThread.start();
 		String configFilePath;
 		if (args.length == 0) {
 			configFilePath = "config.json";

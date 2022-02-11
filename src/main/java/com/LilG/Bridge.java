@@ -377,7 +377,7 @@ class Bridge {
 											"%s" +
 											"%1$s's channels: %s\n" +
 											"%1$s's server: %s\n" +
-											"```", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder.toString(), server
+											"```", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder, server
 							), false);
 							break;
 						}
@@ -512,7 +512,7 @@ class Bridge {
 						if (members.size() == 1) {
 							members.get(0).ban(0, "Banned by " + event.getUserHostmask()).queue();
 						} else {
-							event.respond(String.format("Found multiple users: %s", members.toString()));
+							event.respond(String.format("Found multiple users: %s", members));
 						}
 					} else {
 						event.respond(String.format("No one with the name \"%s\" was found", name));
@@ -669,7 +669,7 @@ class Bridge {
 				.replace('\u0007', '\u2407')
 				.replace("\n", " \u2424")
 				.replace('\r', '\u240d');
-		return String.format(message, parts);
+		return String.format(message, (Object[]) parts);
 	}
 
 	private static Map<String, String> initLangMap() {

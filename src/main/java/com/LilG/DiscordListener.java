@@ -84,7 +84,7 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	@Override
-	public void onReady(ReadyEvent event) {
+	public void onReady(@NotNull ReadyEvent event) {
 		ready = true;
 		config().ircListener.fillChannelMap();
 		Map<String, DiscordChannelConfiguration> configs = config().channelOptions.Discord;
@@ -115,14 +115,14 @@ public class DiscordListener extends ListenerAdapter {
 		return false;
 	}
 
-	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
+	public void onGuildMessageReceived(@NotNull GuildMessageReceivedEvent event) {
 		Main.lastActivity = System.currentTimeMillis();
 		try {
 			String discordNick = "Error nick";
 			String discordUsername = "Error UserName";
 			String discordHostmask = "Error Hostmask";
 			try {
-				discordNick = event.getMember().getEffectiveName();
+				discordNick = Objects.requireNonNull(event.getMember()).getEffectiveName();
 				discordUsername = event.getMember().getUser().getName();
 				discordHostmask = event.getMember().getUser().getId();
 			} catch (NullPointerException e) {
@@ -230,7 +230,7 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	@Override
-	public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
+	public void onTextChannelUpdateTopic(@NotNull TextChannelUpdateTopicEvent event) {
 		Channel channel = getIRCChannel(event);
 		if (channel == null) {
 			return;
