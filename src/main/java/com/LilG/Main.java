@@ -7,11 +7,11 @@ import com.google.common.collect.HashBiMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-import net.dv8tion.jda.core.AccountType;
-import net.dv8tion.jda.core.JDA;
-import net.dv8tion.jda.core.JDABuilder;
-import net.dv8tion.jda.core.entities.Member;
-import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.MultiBotManager;
 import org.pircbotx.UtilSSLSocketFactory;
@@ -131,11 +131,14 @@ public class Main {
 				String token = config.discordToken;
 				if (!jdaMap.containsKey(token)) {
 					LOGGER.trace("Calling JDA Builder with token: " + token);
-					config.jda = new JDABuilder(AccountType.BOT)
-							.setToken(token)
+					List<GatewayIntent> intents = new ArrayList<>();
+					intents.add(GatewayIntent.GUILD_MEMBERS);
+					intents.add(GatewayIntent.GUILD_BANS);
+					intents.add(GatewayIntent.GUILD_MESSAGES);
+					config.jda = JDABuilder.create(token, intents)
 							.setAutoReconnect(true)
 							.setEnableShutdownHook(true)
-							.addEventListener(config.discordListener)
+							.addEventListeners(config.discordListener)
 							.build()
 							.awaitReady();
 					LOGGER.trace("JDA built\n" + config.jda);

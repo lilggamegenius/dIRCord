@@ -6,7 +6,7 @@ import com.LilG.Config.IRCChannelConfiguration;
 import com.LilG.utils.LilGUtil;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableSortedSet;
-import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.api.entities.TextChannel;
 import org.pircbotx.Channel;
 import org.pircbotx.User;
 import org.pircbotx.UserLevel;
@@ -159,7 +159,6 @@ public class IrcListener extends ListenerAdapter {
 			LOGGER.error("Error in IrcListener\n", e);
 		}
 		Main.lastActivity = System.currentTimeMillis();
-		//fillChannelMap();
 	}
 
 	public void onNotice(NoticeEvent event) {

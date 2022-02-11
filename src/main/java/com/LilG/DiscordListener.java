@@ -5,18 +5,19 @@ import com.LilG.Config.Configuration;
 import com.LilG.Config.DiscordChannelConfiguration;
 import com.LilG.utils.LilGUtil;
 import com.google.common.base.Splitter;
-import net.dv8tion.jda.core.Permission;
-import net.dv8tion.jda.core.entities.Member;
-import net.dv8tion.jda.core.entities.Message;
-import net.dv8tion.jda.core.entities.TextChannel;
-import net.dv8tion.jda.core.events.ReadyEvent;
-import net.dv8tion.jda.core.events.channel.text.GenericTextChannelEvent;
-import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateTopicEvent;
-import net.dv8tion.jda.core.events.guild.member.GuildMemberJoinEvent;
-import net.dv8tion.jda.core.events.guild.member.GuildMemberLeaveEvent;
-import net.dv8tion.jda.core.events.guild.member.GuildMemberNickChangeEvent;
-import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
-import net.dv8tion.jda.core.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.channel.text.GenericTextChannelEvent;
+import net.dv8tion.jda.api.events.channel.text.update.TextChannelUpdateTopicEvent;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.jetbrains.annotations.NotNull;
 import org.pircbotx.Channel;
 import org.slf4j.LoggerFactory;
 
@@ -133,8 +134,7 @@ public class DiscordListener extends ListenerAdapter {
 			}
 			LOGGER.info(String.format("(%s) #%s: <%s!%s@%s> %s", event.getGuild().getName(), event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getContentRaw()));
 
-			if (event.getAuthor().isFake() ||
-					event.getMember().equals(event.getGuild().getSelfMember()) ||
+			if (Objects.equals(event.getMember(), event.getGuild().getSelfMember()) ||
 					handleCommand(event)) {
 				return;
 			}
@@ -163,9 +163,8 @@ public class DiscordListener extends ListenerAdapter {
 							if (LilGUtil.wildCardMatch(msg, match)) {
 								String reason = autoBan.get(match);
 								event.getAuthor().openPrivateChannel().queue(
-										author -> author.sendMessage("You were banned: " + reason).queue(s -> {
-											event.getGuild().getController().ban(event.getMember(), 0, reason).queue();
-										})
+										author -> author.sendMessage("You were banned: " + reason)
+												.queue(s -> event.getMember().ban(0, reason).queue())
 								);
 								event.getMessage().delete().reason(reason).queue();
 								return;
@@ -275,7 +274,8 @@ public class DiscordListener extends ListenerAdapter {
         }
     }*/
 
-	public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
+	@Override
+	public void onGuildMemberUpdateNickname(GuildMemberUpdateNicknameEvent event) {
 		Member user = event.getMember();
 		Member self = event.getGuild().getSelfMember();
 		boolean same = false;
@@ -284,7 +284,7 @@ public class DiscordListener extends ListenerAdapter {
 		}
 		if (user.getEffectiveName().equalsIgnoreCase(self.getEffectiveName())) {
 			if (self.hasPermission(Permission.NICKNAME_MANAGE) && self.canInteract(user)) {
-				event.getGuild().getController().setNickname(user, event.getPrevNick()).reason("Same nick as bridge bot").queue();
+				event.getGuild().modifyNickname(user, event.getOldNickname()).reason("Same nick as bridge bot").queue();
 			} else {
 				same = true;
 				Objects.requireNonNull(event.getGuild().getDefaultChannel()).sendMessage(String.format(
@@ -304,8 +304,8 @@ public class DiscordListener extends ListenerAdapter {
 			}
 			textChannel1 = textChannel;
 
-			String prevNick = event.getPrevNick();
-			String newNick = event.getNewNick();
+			String prevNick = event.getOldNickname();
+			String newNick = event.getNewNickname();
 			String username = event.getMember().getUser().getName();
 			if (prevNick == null) {
 				prevNick = username;
@@ -324,8 +324,7 @@ public class DiscordListener extends ListenerAdapter {
 		String hostmask = user.getEffectiveName() + "!" + user.getUser().getName() + "@" + user.getUser().getId();
 		for(String masksToBan : config().BanOnSight){
 			if(LilGUtil.matchHostMask(hostmask, masksToBan)){
-				event.getGuild().getController().ban(user, 0, "Ban On Sight: " + masksToBan).queue(s ->
-						{
+				user.ban(0, "Ban On Sight: " + masksToBan).queue(s -> {
 							assert textChannel2 != null;
 							textChannel2.sendMessage(String.format("User %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d -> {
 								if (channel1 != null) {
@@ -342,6 +341,7 @@ public class DiscordListener extends ListenerAdapter {
 		}
 	}
 
+	@Override
 	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
 		Member user = event.getMember();
 		List<Channel> channels = new ArrayList<>();
@@ -362,7 +362,7 @@ public class DiscordListener extends ListenerAdapter {
 		String formattedName = formatMember(user, user.getEffectiveName());
 		for (String masksToBan : config().BanOnSight) {
 			if (LilGUtil.matchHostMask(hostmask, masksToBan)) {
-				event.getGuild().getController().ban(user, 0, "Ban On Sight: " + masksToBan).queue(s ->
+				user.ban(0, "Ban On Sight: " + masksToBan).queue(s ->
 						textChannel.sendMessage(String.format("Joining user %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d ->
 								channel1.send().message(
 										String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
@@ -384,8 +384,9 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	@Override
-	public void onGuildMemberLeave(GuildMemberLeaveEvent event) {
+	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
 		Member user = event.getMember();
+		if (user == null) return;
 		List<Channel> channels = new ArrayList<>();
 		List<TextChannel> textChannels = new ArrayList<>();
 		for (TextChannel textChannel : event.getGuild().getTextChannels()) {

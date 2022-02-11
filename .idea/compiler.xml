@@ -4,9 +4,7 @@
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
     </annotationProcessing>
-    <bytecodeTargetLevel target="8">
-      <module name="dIRCord.main" target="12" />
-      <module name="dIRCord.test" target="12" />
+    <bytecodeTargetLevel target="12">
       <module name="workspace-dIRCord_main" target="1.8" />
       <module name="workspace-dIRCord_test" target="1.8" />
     </bytecodeTargetLevel>

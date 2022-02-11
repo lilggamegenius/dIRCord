@@ -2,10 +2,14 @@
   <library name="Gradle: com.github.TheLQ:pircbotx:master-SNAPSHOT">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/6e9a6ea5c931a45d783ab4a5976299f84156de64/pircbotx-master-SNAPSHOT.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/876115197fac51e129aa871db56fedc0992c9148/pircbotx-master-SNAPSHOT.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/35a6f93f95bf274c20e8f32abf613a376148c846/pircbotx-master-SNAPSHOT.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/17fc238952aa2200dfbfc8bb15f2ce33c3ee2f8a/pircbotx-master-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/7ff5ec026bc0bc60d59f6beb970be80554829cf4/pircbotx-master-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.TheLQ/pircbotx/master-SNAPSHOT/b9b43df928b42a3acd64192ea4270c9967500022/pircbotx-master-SNAPSHOT-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

@@ -5,10 +5,10 @@ import com.LilG.utils.LilGUtil;
 import com.google.common.collect.ImmutableSortedSet;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
-import net.dv8tion.jda.core.OnlineStatus;
-import net.dv8tion.jda.core.Permission;
-import net.dv8tion.jda.core.entities.*;
-import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.OnlineStatus;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.egit.github.core.Gist;
 import org.eclipse.egit.github.core.GistFile;
@@ -283,16 +283,21 @@ class Bridge {
 								status = "Do not disturb";
 							}
 							avatar = member.getUser().getAvatarUrl();
-							Game gameObj = member.getGame();
-							if (gameObj != null) {
-								streaming = gameObj.getType() != Game.GameType.DEFAULT;
-								game = streaming ? member.getGame().getName() : member.getGame().getUrl();
+							List<Activity> activityList = member.getActivities();
+							if (!activityList.isEmpty()) {
+								streaming = false;
+								game = ""; // Make java's linter happy
+								for (Activity activity :
+										activityList) {
+									streaming = activity.getType() != Activity.ActivityType.DEFAULT;
+									game = streaming ? activity.getName() : activity.getUrl();
+								}
 							} else {
 								streaming = false;
 								game = "nothing";
 							}
-							joinDate = member.getJoinDate().toLocalDateTime().toString();
-							registerDate = member.getUser().getCreationTime().toLocalDateTime().toString();
+							joinDate = member.getTimeJoined().toLocalDateTime().toString();
+							registerDate = member.getUser().getTimeCreated().toLocalDateTime().toString();
 							StringBuilder rolesBuilder = new StringBuilder();
 							boolean first = true;
 							for (Role role : member.getRoles()) {
@@ -505,7 +510,7 @@ class Bridge {
 					List<Member> members = guild.getMembersByEffectiveName(name, true);
 					if (!members.isEmpty()) {
 						if (members.size() == 1) {
-							guild.getController().ban(members.get(0), 0, "Banned by " + event.getUserHostmask()).queue();
+							members.get(0).ban(0, "Banned by " + event.getUserHostmask()).queue();
 						} else {
 							event.respond(String.format("Found multiple users: %s", members.toString()));
 						}
