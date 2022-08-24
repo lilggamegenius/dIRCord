@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Logger;
 import com.LilG.Config.Configuration;
 import com.LilG.Config.DiscordChannelConfiguration;
 import com.LilG.utils.LilGUtil;
-import com.google.common.base.Splitter;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
@@ -22,6 +21,7 @@ import org.pircbotx.Channel;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -121,20 +121,22 @@ public class DiscordListener extends ListenerAdapter {
 			String discordNick = "Error nick";
 			String discordUsername = "Error UserName";
 			String discordHostmask = "Error Hostmask";
+			Member member = event.getMember();
 			try {
-				discordNick = Objects.requireNonNull(event.getMember()).getEffectiveName();
-				discordUsername = event.getMember().getUser().getName();
-				discordHostmask = event.getMember().getUser().getId();
-			} catch (NullPointerException e) {
-				discordNick = event.getAuthor().getName();
-				discordUsername = discordNick;
-				discordHostmask = event.getAuthor().getId();
+				if (member != null) {
+					discordNick = member.getEffectiveName();
+					discordUsername = member.getUser().getName();
+					discordHostmask = member.getUser().getId();
+				} else {
+					discordUsername = discordNick = event.getAuthor().getName();
+					discordHostmask = event.getAuthor().getId();
+				}
 			} catch (Exception e) {
 				LOGGER.error("Error receiving message" + errorMsg, e);
 			}
 			LOGGER.info(String.format("(%s) #%s: <%s!%s@%s> %s", event.getGuild().getName(), event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getContentRaw()));
 
-			if (Objects.equals(event.getMember(), event.getGuild().getSelfMember()) ||
+			if (Objects.equals(member, event.getGuild().getSelfMember()) ||
 					handleCommand(event)) {
 				return;
 			}
@@ -181,11 +183,10 @@ public class DiscordListener extends ListenerAdapter {
 						}
 					}
 					//:<hostmask> PRIVMSG #<channel> :<msg>\r\n
-					String msgLen = ":" + channel.getBot().getUserBot().getHostmask() + " PRIVMSG " + channel.getName() + " :" + message;
-					if (msgLen.length() > 500) {
-						int hostMaskLen = channel.getBot().getUserBot().getHostmask().length();
-						int channelLen = channel.getName().length();
-						Iterable<String> msgs = Splitter.fixedLength(490 - (user.length() + hostMaskLen + channelLen)).split(msg);
+					int commandLen = (':' + channel.getBot().getUserBot().getHostmask() + " PRIVMSG " + channel.getName() + " :" + user).getBytes(StandardCharsets.UTF_8).length + 5; // Add 5 bytes for the extra chars added when formatted
+					int msgLen = msg.getBytes(StandardCharsets.UTF_8).length;
+					if ((commandLen + msgLen) > 512) {
+						List<String> msgs = SplitMessageForIRC(msg, commandLen);
 						for (String str : msgs) {
 							channel.send().message(
 									String.format("<%s> %s",
@@ -227,6 +228,30 @@ public class DiscordListener extends ListenerAdapter {
 		} catch (Exception e) {
 			LOGGER.error("Error in DiscordListener" + errorMsg, e);
 		}
+	}
+
+	List<String> SplitMessageForIRC(@NotNull String msg, int commandLen) {
+		List<String> ret = new ArrayList<>();
+		byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+		int curOffset = 0;
+		int index = 512 - commandLen;
+		while ((curOffset + index) < msgBytes.length) {
+			while ((msgBytes[curOffset + index] & 0xC0) == 0x80)
+				index--; // If we're in the middle of a byte sequence, go back until we're not
+			if ((msgBytes[curOffset + index] & 0xC0) == 0xC0)
+				index--; // Now go back past the start of the byte sequence. This should always be true if we were in the while loop before this
+			byte[] msgSlice = new byte[index + 1];
+			System.arraycopy(msgBytes, curOffset, msgSlice, 0, index + 1);
+			ret.add(new String(msgSlice, StandardCharsets.UTF_8));
+			curOffset += index + 1;
+			index = 512 - commandLen;
+		}
+
+		int length = msgBytes.length - curOffset;
+		byte[] msgSlice = new byte[length];
+		System.arraycopy(msgBytes, curOffset, msgSlice, 0, length);
+		ret.add(new String(msgSlice, StandardCharsets.UTF_8));
+		return ret;
 	}
 
 	@Override
@@ -447,8 +472,8 @@ public class DiscordListener extends ListenerAdapter {
 		darkGray(14, new Color(96, 125, 139)),
 		darkerGray(1, new Color(84, 110, 122));
 
-		byte ircColor;
-		Color color;
+		final byte ircColor;
+		final Color color;
 
 		ColorMap(int ircColor, Color color) {
 			this.ircColor = (byte) ircColor;

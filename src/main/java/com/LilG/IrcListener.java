@@ -269,9 +269,9 @@ public class IrcListener extends ListenerAdapter {
 		SimpleDateFormat format = new SimpleDateFormat("EEE, d MMM yyyy h:mm:ss a Z");
 		String formattedTime = format.format(time);
 		if (event.isChanged()) {
-			channel.sendMessage(String.format("%s has changed topic to: `%s` at %s", event.getUser().getHostmask(), event.getTopic(), formattedTime)).queue();
-		} else {
-			channel.sendMessage(String.format("Current Topic: `%s` set by %s at %s", event.getTopic(), event.getUser().getHostmask(), formattedTime)).queue();
+			channel.sendMessage(String.format("%s has changed topic to: `%s` at %s", event.getUser().getNick(), event.getTopic(), formattedTime)).queue();
+		} else if (channelConfig(event.getChannel().getName()).echoCurrentTopic) {
+			channel.sendMessage(String.format("Current Topic: `%s` set by %s at %s", event.getTopic(), event.getUser().getNick(), formattedTime)).queue();
 		}
 		//fillChannelMap();
 	}
