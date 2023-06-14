@@ -1,11 +1,11 @@
 <component name="libraryTable">
-  <library name="Gradle: com.github.pircbotx:pircbotx:master-SNAPSHOT">
+  <library name="Gradle: com.github.pircbotx:pircbotx:master-SNAPSHOT" external-system-id="GRADLE">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.pircbotx/pircbotx/master-SNAPSHOT/b59fa78bb2f6e898e455e4764b8813f4aa2d9a42/pircbotx-master-SNAPSHOT.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.pircbotx/pircbotx/master-SNAPSHOT/4a1fc6b6b80f78bb22cf7f3878a49e70c4a35a22/pircbotx-master-SNAPSHOT.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.pircbotx/pircbotx/master-SNAPSHOT/a0f0e7626356baaca1059c6eb0d37c1657011f61/pircbotx-master-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.pircbotx/pircbotx/master-SNAPSHOT/1559a9f85e4cab0a990c039c6fff22924c696c6e/pircbotx-master-SNAPSHOT-sources.jar!/" />
     </SOURCES>
   </library>
 </component>
