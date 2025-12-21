@@ -1,6 +1,6 @@
 <component name="libraryTable">
   <library name="Gradle: org.junit.jupiter:junit-jupiter-engine:5.9.3" type="java-imported" external-system-id="GRADLE">
-    <properties groupId="org.junit.jupiter" artifactId="junit-jupiter-engine" version="5.9.3" />
+    <properties groupId="org.junit.jupiter" artifactId="junit-jupiter-engine" version="5.9.3" baseVersion="5.9.3" />
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-engine/5.9.3/355322b03bf39306a183162cd06626c206f0286b/junit-jupiter-engine-5.9.3.jar!/" />
     </CLASSES>

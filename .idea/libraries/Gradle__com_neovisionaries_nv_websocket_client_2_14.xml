@@ -1,6 +1,6 @@
 <component name="libraryTable">
   <library name="Gradle: com.neovisionaries:nv-websocket-client:2.14" type="java-imported" external-system-id="GRADLE">
-    <properties groupId="com.neovisionaries" artifactId="nv-websocket-client" version="2.14" />
+    <properties groupId="com.neovisionaries" artifactId="nv-websocket-client" version="2.14" baseVersion="2.14" />
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.neovisionaries/nv-websocket-client/2.14/1b66d37914b232cef45e56ec8c01907620de9e3a/nv-websocket-client-2.14.jar!/" />
     </CLASSES>

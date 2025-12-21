@@ -55,6 +55,7 @@ public class Main {
 		} catch (URISyntaxException e) {
 			thisJar_ = new File(".");
 			lastModified_ = System.currentTimeMillis();
+			//noinspection CallToPrintStackTrace
 			e.printStackTrace();
 		}
 		thisJar = thisJar_;
@@ -66,7 +67,7 @@ public class Main {
 			LOGGER.trace("Starting updater thread");
 			while (!t.isInterrupted()) {
 				t.wait(60 * 1000);
-				if (Main.lastActivity + 1000 * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
+				if (Main.lastActivity + 1000L * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
 					LOGGER.trace("Checking for new build");
 					Main.checkForNewBuild(args);
 				}
@@ -89,7 +90,7 @@ public class Main {
 			configFilePath = args[0];
 		}
 		configFile = new File(configFilePath);
-		LOGGER.info("Path = " + configFile.getAbsolutePath());
+		LOGGER.info("Path = {}", configFile.getAbsolutePath());
 		try (Reader reader = new FileReader(configFile)) {
 			config = gson.fromJson(reader, Configuration[].class);
 			if (config.length == 0) {
@@ -133,7 +134,7 @@ public class Main {
 				manager.addBot(ircConfig);
 				String token = config.discordToken;
 				if (!jdaMap.containsKey(token)) {
-					LOGGER.trace("Calling JDA Builder with token: " + token);
+					LOGGER.trace("Calling JDA Builder with token: {}", token);
 					List<GatewayIntent> intents = new ArrayList<>();
 					intents.add(GatewayIntent.GUILD_MEMBERS);
 					intents.add(GatewayIntent.GUILD_BANS);
@@ -162,7 +163,7 @@ public class Main {
 				}
 			}));
 		} catch (JsonSyntaxException e) {
-			try (FileWriter emptyFile = new FileWriter(new File("EmptyConfig.json"))) {
+			try (FileWriter emptyFile = new FileWriter("EmptyConfig.json")) {
 				LOGGER.error("Error reading config json", e);
 				emptyFile.write(gson.toJson(new Configuration[]{new Configuration()}));
 			} catch (Exception e2) {
@@ -249,7 +250,7 @@ public class Main {
 			}
 			Main.config = configs;
 		} catch (JsonSyntaxException | IllegalStateException e) {
-			try (FileWriter emptyFile = new FileWriter(new File("EmptyConfig.json"))) {
+			try (FileWriter emptyFile = new FileWriter("EmptyConfig.json")) {
 				LOGGER.error("Error reading config json", e);
 				emptyFile.write(gson.toJson(new Configuration[]{new Configuration()}));
 			} catch (Exception e2) {
