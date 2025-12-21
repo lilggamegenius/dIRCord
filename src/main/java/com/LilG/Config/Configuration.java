@@ -4,7 +4,7 @@ import com.LilG.DiscordListener;
 import com.LilG.IrcListener;
 import com.google.common.collect.HashBiMap;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.pircbotx.Channel;
 import org.pircbotx.PircBotX;
 import org.pircbotx.delay.Delay;

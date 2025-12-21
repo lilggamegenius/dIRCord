@@ -7,14 +7,14 @@ import com.LilG.utils.LilGUtil;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.ReadyEvent;
-import net.dv8tion.jda.api.events.channel.text.GenericTextChannelEvent;
-import net.dv8tion.jda.api.events.channel.text.update.TextChannelUpdateTopicEvent;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.channel.update.ChannelUpdateTopicEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 import org.pircbotx.Channel;
@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import static com.LilG.Bridge.formatString;
 import static com.LilG.Main.errorMsg;
@@ -50,17 +51,12 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	private String formatMember(Member user, FormatAs format) {
-		switch (format) {
-			case effectiveName:
-				return formatMember(user, (String) null);
-			case NickName:
-				return formatMember(user, user.getNickname());
-			case Username:
-				return formatMember(user, user.getUser().getName());
-			case ID:
-				return formatMember(user, user.getUser().getId()); // ????
-		}
-		return "";
+		return switch (format) {
+			case effectiveName -> formatMember(user, (String) null);
+			case NickName -> formatMember(user, user.getNickname());
+			case Username -> formatMember(user, user.getUser().getName());
+			case ID -> formatMember(user, user.getUser().getId()); // ????
+		};
 	}
 
 	private String formatMember(Member user, String override) {
@@ -79,8 +75,11 @@ public class DiscordListener extends ListenerAdapter {
 		return String.format("%s%s%c", color, nameWithSpace, colorCode);
 	}
 
-	private Channel getIRCChannel(GuildMessageReceivedEvent event) {
-		return config().channelMapObj.get(event.getChannel());
+	private Channel getIRCChannel(MessageReceivedEvent event) {
+		if (!event.isFromGuild() || event.getChannel().getType() != ChannelType.TEXT) {
+			return null;
+		}
+		return config().channelMapObj.get(event.getChannel().asTextChannel());
 	}
 
 	@Override
@@ -95,11 +94,11 @@ public class DiscordListener extends ListenerAdapter {
 		}
 	}
 
-	private Channel getIRCChannel(GenericTextChannelEvent event) {
-		return config().channelMapObj.get(event.getChannel());
+	private Channel getIRCChannel(ChannelUpdateTopicEvent event) {
+		return config().channelMapObj.get(event.getChannel().asTextChannel());
 	}
 
-	private boolean handleCommand(GuildMessageReceivedEvent event) {
+	private boolean handleCommand(MessageReceivedEvent event) {
 		String[] message = LilGUtil.splitMessage(event.getMessage().getContentRaw());
 		if (message.length == 0 || message[0].isEmpty()) {
 			return false;
@@ -115,7 +114,11 @@ public class DiscordListener extends ListenerAdapter {
 		return false;
 	}
 
-	public void onGuildMessageReceived(@NotNull GuildMessageReceivedEvent event) {
+	@Override
+	public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+		if (!event.isFromGuild()) {
+			return;
+		}
 		Main.lastActivity = System.currentTimeMillis();
 		try {
 			String discordNick = "Error nick";
@@ -134,10 +137,10 @@ public class DiscordListener extends ListenerAdapter {
 			} catch (Exception e) {
 				LOGGER.error("Error receiving message" + errorMsg, e);
 			}
-			LOGGER.info(String.format("(%s) #%s: <%s!%s@%s> %s", event.getGuild().getName(), event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getContentRaw()));
+			LOGGER.info("({}) #{}: <{}!{}@{}> {}", event.getGuild().getName(), event.getChannel().getName(), discordNick, discordUsername, discordHostmask, event.getMessage().getContentRaw());
 
 			if (Objects.equals(member, event.getGuild().getSelfMember()) ||
-					handleCommand(event)) {
+					handleCommand(event) || event.isWebhookMessage()) {
 				return;
 			}
 			String message = event.getMessage().getContentDisplay();
@@ -166,7 +169,7 @@ public class DiscordListener extends ListenerAdapter {
 								String reason = autoBan.get(match);
 								event.getAuthor().openPrivateChannel().queue(
 										author -> author.sendMessage("You were banned: " + reason)
-												.queue(s -> event.getMember().ban(0, reason).queue())
+												.queue(s -> event.getMember().ban(0, TimeUnit.MILLISECONDS).reason(reason).queue())
 								);
 								event.getMessage().delete().reason(reason).queue();
 								return;
@@ -224,7 +227,7 @@ public class DiscordListener extends ListenerAdapter {
 				}
 				channel.send().message(embedMessage.toString());
 			}
-			Main.LastUserToSpeak.put(event.getChannel(), event.getMember());
+			Main.LastUserToSpeak.put(event.getGuildChannel().asTextChannel(), event.getMember());
 		} catch (Exception e) {
 			LOGGER.error("Error in DiscordListener" + errorMsg, e);
 		}
@@ -255,14 +258,14 @@ public class DiscordListener extends ListenerAdapter {
 	}
 
 	@Override
-	public void onTextChannelUpdateTopic(@NotNull TextChannelUpdateTopicEvent event) {
+	public void onChannelUpdateTopic(@NotNull ChannelUpdateTopicEvent event) {
 		Channel channel = getIRCChannel(event);
 		if (channel == null) {
 			return;
 		}
 
 		// Afaik Discord doesn't have info for who changed a topic
-		channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getChannel().getTopic()));
+		channel.send().message(String.format("%s has changed topic to: %s", "A user", event.getNewValue()));
 	}
 
     /*public void onUserOnlineStatusUpdate(UserOnlineStatusUpdateEvent event) {
@@ -312,7 +315,7 @@ public class DiscordListener extends ListenerAdapter {
 				event.getGuild().modifyNickname(user, event.getOldNickname()).reason("Same nick as bridge bot").queue();
 			} else {
 				same = true;
-				Objects.requireNonNull(event.getGuild().getDefaultChannel()).sendMessage(String.format(
+				Objects.requireNonNull(event.getGuild().getDefaultChannel()).asTextChannel().sendMessage(String.format(
 						"User %s!%s@%s has the same name as the bridge bot",
 						user.getEffectiveName(),
 						user.getUser().getName(),
@@ -349,7 +352,7 @@ public class DiscordListener extends ListenerAdapter {
 		String hostmask = user.getEffectiveName() + "!" + user.getUser().getName() + "@" + user.getUser().getId();
 		for(String masksToBan : config().BanOnSight){
 			if(LilGUtil.matchHostMask(hostmask, masksToBan)){
-				user.ban(0, "Ban On Sight: " + masksToBan).queue(s -> {
+				user.ban(0, TimeUnit.MILLISECONDS).reason("Ban On Sight: " + masksToBan).queue(s -> {
 							assert textChannel2 != null;
 							textChannel2.sendMessage(String.format("User %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d -> {
 								if (channel1 != null) {
@@ -387,7 +390,7 @@ public class DiscordListener extends ListenerAdapter {
 		String formattedName = formatMember(user, user.getEffectiveName());
 		for (String masksToBan : config().BanOnSight) {
 			if (LilGUtil.matchHostMask(hostmask, masksToBan)) {
-				user.ban(0, "Ban On Sight: " + masksToBan).queue(s ->
+				user.ban(0, TimeUnit.MILLISECONDS).reason("Ban On Sight: " + masksToBan).queue(s ->
 						textChannel.sendMessage(String.format("Joining user %s was banned due to being on Ban-On-Sight list", hostmask)).queue(d ->
 								channel1.send().message(
 										String.format("\u001D*%s\u001D* was banned due to being on Ban-On-Sight list",
@@ -438,7 +441,7 @@ public class DiscordListener extends ListenerAdapter {
 		return Main.config[configID];
 	}
 
-	private DiscordChannelConfiguration channelConfig(GuildMessageReceivedEvent event) {
+	private DiscordChannelConfiguration channelConfig(MessageReceivedEvent event) {
 		return channelConfig(event.getChannel().getName());
 	}
 

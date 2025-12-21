@@ -8,7 +8,8 @@ import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.egit.github.core.Gist;
 import org.eclipse.egit.github.core.GistFile;
@@ -24,6 +25,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ggonz on 4/4/2017.
@@ -37,15 +39,15 @@ class Bridge {
 		return Main.config[configID].channelMapObj.inverse().get(event.getChannel());
 	}
 
-	private static Channel getIRCChannel(byte configID, GuildMessageReceivedEvent event) {
-		return Main.config[configID].channelMapObj.get(event.getChannel());
+	private static Channel getIRCChannel(byte configID, MessageReceivedEvent event) {
+		return Main.config[configID].channelMapObj.get(event.getGuildChannel());
 	}
 
 	private static boolean checkPerm(byte configID, MessageEvent event) {
 		return checkPerm(configID, event, UserLevel.HALFOP);
 	}
 
-	private static boolean checkPerm(byte configID, GuildMessageReceivedEvent event) {
+	private static boolean checkPerm(byte configID, MessageReceivedEvent event) {
 		return checkPerm(configID, event, Permission.MESSAGE_MANAGE);
 	}
 
@@ -57,7 +59,7 @@ class Bridge {
 		return userLevel.ordinal() >= userLevelToCheck.ordinal();
 	}
 
-	private static boolean checkPerm(byte configID, GuildMessageReceivedEvent event, Permission permission) {
+	private static boolean checkPerm(byte configID, MessageReceivedEvent event, Permission permission) {
 		/*if (event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID)) {
 			return true;
 		}*/
@@ -92,11 +94,11 @@ class Bridge {
 				event.respondWith(message);
 			}
 		} else {
-			GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+			MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 			if (highlight) {
-				event.getChannel().sendMessage(String.format("%s: %s", event.getMember().getAsMention(), message)).complete();
+				event.getGuildChannel().sendMessage(String.format("%s: %s", event.getMember().getAsMention(), message)).complete();
 			} else {
-				event.getChannel().sendMessage(message).complete();
+				event.getGuildChannel().sendMessage(message).complete();
 			}
 		}
 	}
@@ -288,7 +290,7 @@ class Bridge {
 								game = ""; // Make java's linter happy
 								for (Activity activity :
 										activityList) {
-									streaming = activity.getType() != Activity.ActivityType.DEFAULT;
+									streaming = activity.getType() == Activity.ActivityType.STREAMING;
 									game = streaming ? activity.getName() : activity.getUrl();
 								}
 							} else {
@@ -340,7 +342,7 @@ class Bridge {
 							event.respond(String.format("No one with the name \"%s\" was found", name));
 						}
 					} else {
-						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+						MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 						String nick, username, hostname;
 						String hostmask, realName, awayMsg, server;
 						boolean away;
@@ -406,7 +408,7 @@ class Bridge {
 							event.respond(String.format("No one with the name \"%s\" was found", name));
 						}
 					} else {
-						GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+						MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 						String nick, username, hostname;
 						User user = null;
 						for (User curUser : getIRCChannel(configID, event).getUsers()) {
@@ -432,8 +434,8 @@ class Bridge {
 					MessageEvent event = (MessageEvent) eventObj;
 					sendMessage(eventObj, String.format("Topic: \"%s\" set by %s at %s", event.getChannel().getTopic(), event.getChannel().getTopicSetter(), event.getChannel().getTopicTimestamp()), true);
 				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
-					sendMessage(eventObj, String.format("Topic: %s", event.getChannel().getTopic()), false);
+					MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
+					sendMessage(eventObj, String.format("Topic: %s", event.getGuildChannel().asTextChannel().getTopic()), false);
 				}
 			}
 			return;
@@ -446,7 +448,7 @@ class Bridge {
 						event.getUser().send().notice("Rehash complete");
 					}
 				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 					if (checkPerm(configID, event)) {
 						Main.rehash();
 						event.getAuthor().openPrivateChannel().queue(s -> s.sendMessage("Rehash complete").queue());
@@ -469,9 +471,9 @@ class Bridge {
 						return;
 					}
 				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 					if (checkPerm(configID, event)) {
-						channel = event.getChannel();
+						channel = event.getGuildChannel().asTextChannel();
 						//pruner = event.getMember().getEffectiveName();
 					} else {
 						return;
@@ -511,7 +513,7 @@ class Bridge {
 					List<Member> members = guild.getMembersByEffectiveName(name, true);
 					if (!members.isEmpty()) {
 						if (members.size() == 1) {
-							members.get(0).ban(0, "Banned by " + event.getUserHostmask()).queue();
+							members.get(0).ban(0, TimeUnit.MILLISECONDS).reason("Banned by " + event.getUserHostmask()).queue();
 						} else {
 							event.respond(String.format("Found multiple users: %s", members));
 						}
@@ -519,7 +521,7 @@ class Bridge {
 						event.respond(String.format("No one with the name \"%s\" was found", name));
 					}
 				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 					if (!checkPerm(configID, event)) return;
 				}
 			}
@@ -532,7 +534,7 @@ class Bridge {
 
 					}
 				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 				}
 			}
 			break;
@@ -544,7 +546,7 @@ class Bridge {
 				if (IRC) {
 					MessageEvent event = (MessageEvent) eventObj;
 				} else {
-					GuildMessageReceivedEvent event = (GuildMessageReceivedEvent) eventObj;
+					MessageReceivedEvent event = (MessageReceivedEvent) eventObj;
 				}
 	 */
 

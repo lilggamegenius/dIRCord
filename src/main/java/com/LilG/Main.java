@@ -10,7 +10,7 @@ import com.google.gson.JsonSyntaxException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.apache.commons.lang3.StringUtils;
 import org.pircbotx.MultiBotManager;
@@ -138,8 +138,9 @@ public class Main {
 					LOGGER.trace("Calling JDA Builder with token: {}", token);
 					List<GatewayIntent> intents = new ArrayList<>();
 					intents.add(GatewayIntent.GUILD_MEMBERS);
-					intents.add(GatewayIntent.GUILD_BANS);
+					intents.add(GatewayIntent.GUILD_MODERATION);
 					intents.add(GatewayIntent.GUILD_MESSAGES);
+					intents.add(GatewayIntent.MESSAGE_CONTENT);
 					config.jda = JDABuilder.create(token, intents)
 							.setAutoReconnect(true)
 							.setEnableShutdownHook(true)
