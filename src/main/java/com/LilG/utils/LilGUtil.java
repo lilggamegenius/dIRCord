@@ -120,7 +120,7 @@ public class LilGUtil {
 		Unsafe u = getUnsafe();
 		assert u != null;
 		HashSet<Field> fields = new HashSet<>();
-		Class c = o.getClass();
+		Class<?> c = o.getClass();
 		while (c != Object.class) {
 			for (Field f : c.getDeclaredFields()) {
 				if ((f.getModifiers() & Modifier.STATIC) == 0) {
@@ -175,14 +175,14 @@ public class LilGUtil {
 					// go to next string
 				}
 			} else {
-				for (int i = 0; list.size() > i || amountToSplit > i; i++) { // go through all of the
+				for (int i = 0; list.size() > i; i++) { // go through all of the
 					list.set(i, list.get(i).replaceAll("\"", "")); // remove quotes left in the string
 					list.set(i, list.get(i).replaceAll("''", "\"")); // replace double ' to quotes
 					// go to next string
 				}
 			}
 		}
-		return list.toArray(new String[list.size()]);
+		return list.toArray(new String[0]);
 	}
 
 	public static boolean containsAny(@NotNull String check, @NotNull String... contain) {
@@ -305,7 +305,7 @@ public class LilGUtil {
 		if (echoTime) {
 			LOGGER.debug("Sleeping for " + time + " seconds");
 		}
-		Thread.sleep(time * 1000);
+		Thread.sleep(time * 1000L);
 	}
 
 	public static <T extends Enum<?>> T searchEnum(Class<T> enumeration, String search) {
@@ -319,7 +319,7 @@ public class LilGUtil {
 
 	public static void removeDuplicates(LinkedList<String> list) {
 		LinkedList<String> ar = new LinkedList<>();
-		while (list.size() > 0) {
+		while (!list.isEmpty()) {
 			ar.add(list.get(0));
 			list.removeAll(Collections.singleton(list.get(0)));
 		}

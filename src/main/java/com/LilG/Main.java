@@ -62,11 +62,12 @@ public class Main {
 		lastModified = lastModified_;
 	}
 
-	public static void Updater(Thread t, String[] args) {
+	public static void Updater(String[] args) {
+		final Thread currentThread = Thread.currentThread();
 		try {
 			LOGGER.trace("Starting updater thread");
-			while (!t.isInterrupted()) {
-				t.wait(60 * 1000);
+			while (!currentThread.isInterrupted()) {
+				currentThread.wait(60 * 1000);
 				if (Main.lastActivity + 1000L * 60 * config[0].minutesOfInactivityToUpdate < System.currentTimeMillis()) {
 					LOGGER.trace("Checking for new build");
 					Main.checkForNewBuild(args);
@@ -79,9 +80,9 @@ public class Main {
 	}
 
 	public static void main(String[] args) {
-		LOGGER.setLevel(Level.ALL);
+		LOGGER.setLevel(Level.TRACE);
 		LOGGER.debug("dIRCord starting");
-		final Thread curThread = new Thread();
+		final Thread curThread = new Thread(() -> Updater(args));
 		curThread.start();
 		String configFilePath;
 		if (args.length == 0) {
@@ -145,10 +146,10 @@ public class Main {
 							.addEventListeners(config.discordListener)
 							.build()
 							.awaitReady();
-					LOGGER.trace("JDA built\n" + config.jda);
+					LOGGER.trace("JDA built\n{}", config.jda);
 					jdaMap.put(token, config.jda);
 				} else {
-					LOGGER.trace("Using existing JDA with token: " + token);
+					LOGGER.trace("Using existing JDA with token: {}", token);
 					config.jda = jdaMap.get(token);
 					config.jda.addEventListener(config.discordListener);
 				}
@@ -179,7 +180,7 @@ public class Main {
 		if (Thread.holdsLock(kvircFlags)) return;
 		synchronized (kvircFlags) {
 			File newJar = new File(thisJar.getParent(), thisJar.getName() + ".new");
-			LOGGER.trace("This jar: " + thisJar.getName() + " New jar: " + newJar.getName());
+			LOGGER.trace("This jar: {} New jar: {}", thisJar.getName(), newJar.getName());
 			if (!newJar.exists() || thisJar.lastModified() == lastModified) {
 				LOGGER.trace("no new build found");
 				return;

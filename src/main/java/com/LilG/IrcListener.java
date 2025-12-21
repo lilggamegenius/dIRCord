@@ -41,6 +41,7 @@ public class IrcListener extends ListenerAdapter {
 		return getUserSymbol(event.getChannel(), event.getUser());
 	}
 
+	/*
 	public static String getUserSymbol(MessageEvent event, User user) {
 		return getUserSymbol(event.getChannel(), user);
 	}
@@ -48,6 +49,7 @@ public class IrcListener extends ListenerAdapter {
 	public static String getUserSymbol(MessageEvent event, Channel channel) {
 		return getUserSymbol(channel, event.getUser());
 	}
+	*/
 
 	private static String getUserSymbol(Channel channel, User user) {
 		if (channel == null) throw new NullPointerException("Channel");
@@ -250,11 +252,9 @@ public class IrcListener extends ListenerAdapter {
 			if (!configuration.quits) continue;
 			TextChannel textChannel = config().channelMapObj.inverse().get(channel);
 			textChannel.sendMessage(
-					String.format("**\\*%s\\*** _%s_",
+					String.format("**\\*%s\\*** _has quit: %s_",
 							formatName(user),
-							"has quit: " + event.getReason()
-									.replace("http://www.mibbit.com", "<http://www.mibbit.com>")
-									.replace("http://www.androirc.com/", "<http://www.androirc.com/>")
+							event.getReason()
 					)
 			).queue();
 		}
@@ -315,7 +315,7 @@ public class IrcListener extends ListenerAdapter {
 
 	void fillChannelMap() {
 		if (config().pircBotX == null ||
-				config().pircBotX.getUserBot().getChannels().size() == 0 ||
+				config().pircBotX.getUserBot().getChannels().isEmpty() ||
 				!ready) {
 			return;
 		}

@@ -50,17 +50,17 @@ class Bridge {
 	}
 
 	private static boolean checkPerm(byte configID, MessageEvent event, UserLevel userLevelToCheck) {
-		if (LilGUtil.matchHostMask(event.getUserHostmask().getHostmask(), Main.config[configID].IRCBotOwnerHostmask)) {
-			//return true;
-		}
+		/*if (LilGUtil.matchHostMask(event.getUserHostmask().getHostmask(), Main.config[configID].IRCBotOwnerHostmask)) {
+			return true;
+		}*/
 		UserLevel userLevel = getUserLevel(event.getChannel().getUserLevels(event.getUser()));
 		return userLevel.ordinal() >= userLevelToCheck.ordinal();
 	}
 
 	private static boolean checkPerm(byte configID, GuildMessageReceivedEvent event, Permission permission) {
-		if (event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID)) {
-			//return true;
-		}
+		/*if (event.getAuthor().getId().equals(Main.config[configID].DiscordBotOwnerID)) {
+			return true;
+		}*/
 		return event.getMember().hasPermission(permission);
 	}
 
@@ -114,7 +114,7 @@ class Bridge {
 			strToReturn.append(args[argToStartFrom]).append(" ");
 		}
 		LOGGER.debug("Argument joined to: " + strToReturn);
-		if (strToReturn.length() == 0) {
+		if (strToReturn.isEmpty()) {
 			return strToReturn.toString();
 		} else {
 			return strToReturn.substring(0, strToReturn.length() - 1);
@@ -179,9 +179,8 @@ class Bridge {
 				for (int i = 0; i < message.length; i++) {
 					if (!message[i].startsWith(escapePrefix)) continue;
 					message[i] = message[i].substring(escapePrefix.length());
-					switch (message[i]) {
-						case "last":
-							message[i] = Main.LastUserToSpeak.get(channel).getAsMention();
+					if (message[i].equals("last")) {
+						message[i] = Main.LastUserToSpeak.get(channel).getAsMention();
 					}
 				}
 				strToFormat = argJoiner(message);
@@ -371,13 +370,15 @@ class Bridge {
 								first = false;
 							}
 							sendMessage(eventObj, String.format(
-									"```\n" +
-											"%s is %s\n" +
-											"%1$s's real name: %s\n" +
-											"%s" +
-											"%1$s's channels: %s\n" +
-											"%1$s's server: %s\n" +
-											"```", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder, server
+									"""
+											        ```
+											        %s is %s
+											        %1$s's real name: %s
+											        %s\
+											        %1$s's channels: %s
+											        %1$s's server: %s
+											        ```
+											""", nick, hostmask, realName, away ? nick + " Is away: " + awayMsg : "", channelsBuilder, server
 							), false);
 							break;
 						}
@@ -523,7 +524,7 @@ class Bridge {
 				}
 			}
 			break;
-			case "permission": {
+			/*case "permission": {
 				if (IRC) {
 					MessageEvent event = (MessageEvent) eventObj;
 					UserLevel userLevel = getUserLevel(event.getUser().getUserLevels(event.getChannel()));
@@ -535,6 +536,7 @@ class Bridge {
 				}
 			}
 			break;
+			*/
 		}
 	}
 
@@ -666,9 +668,9 @@ class Bridge {
 			}
 		}
 		message = message
-				.replace('\u0007', '\u2407')
-				.replace("\n", " \u2424")
-				.replace('\r', '\u240d');
+				.replace('\u0007', '␇')
+				.replace("\n", " ␤")
+				.replace('\r', '␍');
 		return String.format(message, (Object[]) parts);
 	}
 

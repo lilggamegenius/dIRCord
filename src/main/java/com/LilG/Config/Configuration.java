@@ -55,7 +55,7 @@ public class Configuration {
 	public transient PircBotX pircBotX;
 	public transient JDA jda;
 
-	public class ChannelConfigs {
+	public static class ChannelConfigs {
 		public final Map<String, DiscordChannelConfiguration> Discord;
 		public final Map<String, IRCChannelConfiguration> IRC;
 

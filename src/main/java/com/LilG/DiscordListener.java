@@ -39,7 +39,7 @@ public class DiscordListener extends ListenerAdapter {
 	private final static char colorCode = '\u0003';
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DiscordListener.class);
 	private final byte configID;
-	private volatile boolean ready;
+	//private volatile boolean ready;
 
 	DiscordListener(byte configID) {
 		this.configID = configID;
@@ -85,7 +85,7 @@ public class DiscordListener extends ListenerAdapter {
 
 	@Override
 	public void onReady(@NotNull ReadyEvent event) {
-		ready = true;
+		//ready = true;
 		config().ircListener.fillChannelMap();
 		Map<String, DiscordChannelConfiguration> configs = config().channelOptions.Discord;
 		for (TextChannel channel : config().channelMapObj.keySet()) {
@@ -145,7 +145,7 @@ public class DiscordListener extends ListenerAdapter {
 			if (channel == null) {
 				return;
 			}
-			if (message.length() != 0) {
+			if (!message.isEmpty()) {
 				DiscordChannelConfiguration configuration = channelConfig(event);
 				if (configuration != null && startsWithAny(message, configuration.getCommmandCharacters())) {
 					channel.send().message(
@@ -160,7 +160,7 @@ public class DiscordListener extends ListenerAdapter {
 					String user = formatMember(event.getMember());
 					String msg = formatString(event.getMessage().getContentDisplay());
 					Map<String, String> autoBan = config().AutoBan;
-					if (autoBan.keySet().size() != 0) {
+					if (!autoBan.isEmpty()) {
 						for (String match : autoBan.keySet()) {
 							if (LilGUtil.wildCardMatch(msg, match)) {
 								String reason = autoBan.get(match);
@@ -174,7 +174,7 @@ public class DiscordListener extends ListenerAdapter {
 						}
 					}
 					List<String> spamFilterList = config().channelOptions.IRC.get(channel.getName()).spamFilterList;
-					if (spamFilterList.size() != 0) {
+					if (!spamFilterList.isEmpty()) {
 						for (String match : spamFilterList) {
 							if (LilGUtil.wildCardMatch(msg, match)) {
 								event.getMessage().delete().reason("in spam filter list of " + channel.getName()).queue();
@@ -215,7 +215,7 @@ public class DiscordListener extends ListenerAdapter {
 				}
 			}
 			List<Message.Attachment> attachments;
-			if ((attachments = event.getMessage().getAttachments()).size() != 0) {
+			if (!(attachments = event.getMessage().getAttachments()).isEmpty()) {
 				StringBuilder embedMessage = new StringBuilder(String.format("Attachments from <%s>:",
 						formatMember(event.getMember()))
 				);
